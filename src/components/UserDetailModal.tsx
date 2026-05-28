@@ -78,30 +78,32 @@ export default function UserDetailModal({
                   </div>
                 ) : (
                   <div className="border border-black/5 rounded-2xl overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-sm font-sans">
-                      <thead>
-                        <tr className="bg-[#F5F5F0] text-xs font-bold uppercase tracking-wider text-[#5A5A40]/70 border-b border-black/5">
-                          <th className="px-4 py-3">Ismi/Guruh a'zosi</th>
-                          <th className="px-4 py-3">Username</th>
-                          <th className="px-4 py-3 text-right">Qo'shilgan sana</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-black/5">
-                        {userDetailData.invitations.map((invite: any, index: number) => (
-                          <tr key={index} className="hover:bg-[#F5F5F0]/30 transition-colors">
-                            <td className="px-4 py-3 font-medium">
-                              {invite.inviteeName}
-                            </td>
-                            <td className="px-4 py-3 text-[#5A5A40]/70">
-                              {invite.inviteeUsername ? `@${invite.inviteeUsername}` : "-"}
-                            </td>
-                            <td className="px-4 py-3 text-right text-xs text-[#5A5A40]/60">
-                              {invite.timestamp ? format(new Date(invite.timestamp), "d-MMM, HH:mm", { locale: uz }) : "-"}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm font-sans min-w-[500px]">
+                        <thead>
+                          <tr className="bg-[#F5F5F0] text-xs font-bold uppercase tracking-wider text-[#5A5A40]/70 border-b border-black/5">
+                            <th className="px-4 py-3">Ismi/Guruh a'zosi</th>
+                            <th className="px-4 py-3">Username</th>
+                            <th className="px-4 py-3 text-right">Qo'shilgan sana</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-black/5">
+                          {userDetailData.invitations.map((invite: any, index: number) => (
+                            <tr key={index} className="hover:bg-[#F5F5F0]/30 transition-colors">
+                              <td className="px-4 py-3 font-medium">
+                                {invite.inviteeName}
+                              </td>
+                              <td className="px-4 py-3 text-[#5A5A40]/70">
+                                {invite.inviteeUsername ? `@${invite.inviteeUsername}` : "-"}
+                              </td>
+                              <td className="px-4 py-3 text-right text-xs text-[#5A5A40]/60">
+                                {invite.timestamp ? format(new Date(invite.timestamp), "d-MMM, HH:mm", { locale: uz }) : "-"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>

@@ -47,13 +47,13 @@ export default function DashboardTab({ stats }: DashboardTabProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div className="text-left">
-          <h2 className="text-4xl font-light tracking-tight mb-2">Umumiy Statistika</h2>
-          <p className="text-[#5A5A40]/60 italic">Guruhdagi barcha harakatlar tahlili</p>
+          <h2 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Umumiy Statistika</h2>
+          <p className="text-[#5A5A40]/60 italic text-sm sm:text-base">Guruhdagi barcha harakatlar tahlili</p>
         </div>
-        <div className="flex gap-4">
-          <div className="bg-white px-4 py-2 rounded-xl border border-black/5 flex items-center gap-3 shadow-sm">
+        <div className="flex gap-4 w-full sm:w-auto">
+          <div className="bg-white px-4 py-2 rounded-xl border border-black/5 flex items-center gap-3 shadow-sm w-full sm:w-auto justify-center sm:justify-start">
             <Calendar size={18} className="text-[#5A5A40]" />
             <span className="text-sm font-medium">Oxirgi 7 kun</span>
           </div>
@@ -83,7 +83,7 @@ export default function DashboardTab({ stats }: DashboardTabProps) {
       </div>
 
       {/* Chart */}
-      <div className="bg-white p-8 rounded-[32px] border border-black/5 shadow-sm text-left">
+      <div className="bg-white p-4 sm:p-8 rounded-[32px] border border-black/5 shadow-sm text-left">
         <h3 className="text-xl font-medium mb-8">Faollik grafigi</h3>
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">

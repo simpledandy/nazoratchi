@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle } from "lucide-react";
+import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle, X } from "lucide-react";
 import { TabType } from "../types";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -11,53 +11,85 @@ function cn(...inputs: any[]) {
 interface SidebarProps {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: SidebarProps) {
+  const handleTabClick = (tab: TabType) => {
+    setActiveTab(tab);
+    onClose(); // Auto-close on mobile
+  };
+
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white border-r border-black/5 p-6 flex flex-col gap-8 shadow-sm">
-      <div className="flex items-center gap-3 px-2">
-        <div className="w-10 h-10 bg-[#5A5A40] rounded-xl flex items-center justify-center text-white">
-          <BarChart3 size={24} />
-        </div>
-        <h1 className="font-bold text-xl tracking-tight">Nazoratchi</h1>
-      </div>
+    <>
+      {/* Backdrop for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden" 
+          onClick={onClose}
+        />
+      )}
 
-      <nav className="flex flex-col gap-2">
-        <NavItem 
-          active={activeTab === "dashboard"} 
-          onClick={() => setActiveTab("dashboard")}
-          icon={<BarChart3 size={20} />}
-          label="Dashboard"
-        />
-        <NavItem 
-          active={activeTab === "leaderboard"} 
-          onClick={() => setActiveTab("leaderboard")}
-          icon={<Trophy size={20} />}
-          label="Leaderboard"
-        />
-        <NavItem 
-          active={activeTab === "contests"} 
-          onClick={() => setActiveTab("contests")}
-          icon={<Calendar size={20} />}
-          label="Konkurslar"
-        />
-        <NavItem 
-          active={activeTab === "settings"} 
-          onClick={() => setActiveTab("settings")}
-          icon={<SettingsIcon size={20} />}
-          label="Sozlamalar"
-        />
-      </nav>
-
-      <div className="mt-auto p-4 bg-[#F5F5F0] rounded-2xl border border-black/5">
-        <div className="flex items-center gap-2 text-xs text-[#5A5A40] font-medium uppercase tracking-wider mb-1">
-          <AlertCircle size={14} />
-          Status
+      {/* Sidebar container */}
+      <div className={cn(
+        "fixed left-0 top-0 h-full w-64 bg-white border-r border-black/5 p-6 flex flex-col gap-8 shadow-sm transition-transform duration-300 z-50 md:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {/* Header inside sidebar */}
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#5A5A40] rounded-xl flex items-center justify-center text-white">
+              <BarChart3 size={24} />
+            </div>
+            <h1 className="font-bold text-xl tracking-tight text-left">Nazoratchi</h1>
+          </div>
+          
+          {/* Close button for mobile */}
+          <button 
+            onClick={onClose}
+            className="p-2 -mr-2 rounded-lg hover:bg-[#F5F5F0] text-[#5A5A40] md:hidden cursor-pointer"
+          >
+            <X size={20} />
+          </button>
         </div>
-        <p className="text-sm font-medium">Bot faol holatda</p>
+
+        <nav className="flex flex-col gap-2">
+          <NavItem 
+            active={activeTab === "dashboard"} 
+            onClick={() => handleTabClick("dashboard")}
+            icon={<BarChart3 size={20} />}
+            label="Dashboard"
+          />
+          <NavItem 
+            active={activeTab === "leaderboard"} 
+            onClick={() => handleTabClick("leaderboard")}
+            icon={<Trophy size={20} />}
+            label="Leaderboard"
+          />
+          <NavItem 
+            active={activeTab === "contests"} 
+            onClick={() => handleTabClick("contests")}
+            icon={<Calendar size={20} />}
+            label="Konkurslar"
+          />
+          <NavItem 
+            active={activeTab === "settings"} 
+            onClick={() => handleTabClick("settings")}
+            icon={<SettingsIcon size={20} />}
+            label="Sozlamalar"
+          />
+        </nav>
+
+        <div className="mt-auto p-4 bg-[#F5F5F0] rounded-2xl border border-black/5 text-left">
+          <div className="flex items-center gap-2 text-xs text-[#5A5A40] font-medium uppercase tracking-wider mb-1">
+            <AlertCircle size={14} />
+            Status
+          </div>
+          <p className="text-sm font-medium">Bot faol holatda</p>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

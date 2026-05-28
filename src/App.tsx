@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { format, subDays } from "date-fns";
+import { Menu } from "lucide-react";
 import { Stats, LeaderboardItem, TabType } from "./types";
 import Sidebar from "./components/Sidebar";
 import DashboardTab from "./components/DashboardTab";
@@ -13,6 +14,7 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [userDetailData, setUserDetailData] = useState<any | null>(null);
@@ -102,11 +104,33 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] text-[#1a1a1a] font-serif">
+      {/* Mobile Top Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-black/5 px-4 flex items-center justify-between shadow-xs z-30 md:hidden">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-[#5A5A40] rounded-lg flex items-center justify-center text-white">
+            <Menu size={18} />
+          </div>
+          <span className="font-bold text-lg tracking-tight">Nazoratchi</span>
+        </div>
+        
+        <button 
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 rounded-lg hover:bg-[#F5F5F0] text-[#5A5A40] cursor-pointer"
+        >
+          <Menu size={22} />
+        </button>
+      </header>
+
       {/* Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
 
       {/* Main Content */}
-      <main className="ml-64 p-10 max-w-7xl mx-auto">
+      <main className="ml-0 md:ml-64 p-4 sm:p-6 md:p-10 pt-20 md:pt-10 max-w-7xl mx-auto">
         {activeTab === "dashboard" && <DashboardTab stats={stats} />}
         
         {activeTab === "leaderboard" && (

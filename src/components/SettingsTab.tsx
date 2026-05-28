@@ -8,11 +8,11 @@ export default function SettingsTab() {
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
       <header>
-        <h2 className="text-4xl font-light tracking-tight mb-2">Sozlamalar</h2>
-        <p className="text-[#5A5A40]/60 italic">Bot xabarlari va adminlarni boshqarish</p>
+        <h2 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Sozlamalar</h2>
+        <p className="text-[#5A5A40]/60 italic text-sm sm:text-base">Bot xabarlari va adminlarni boshqarish</p>
       </header>
 
-      <div className="bg-white p-8 rounded-[32px] border border-black/5 shadow-sm max-w-2xl text-left">
+      <div className="bg-white p-4 sm:p-8 rounded-[32px] border border-black/5 shadow-sm max-w-2xl text-left">
         <div className="space-y-6">
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-[#5A5A40] mb-2">Xush kelibsiz xabari</label>

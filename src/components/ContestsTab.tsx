@@ -21,13 +21,13 @@ export default function ContestsTab({ contestForm, setContestForm, handleCreateC
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
       <header className="flex justify-between items-end">
         <div>
-          <h2 className="text-4xl font-light tracking-tight mb-2">Konkurslar</h2>
-          <p className="text-[#5A5A40]/60 italic">Yangi konkurslar yaratish va boshqarish</p>
+          <h2 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Konkurslar</h2>
+          <p className="text-[#5A5A40]/60 italic text-sm sm:text-base">Yangi konkurslar yaratish va boshqarish</p>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[32px] border border-black/5 shadow-sm text-left">
+        <div className="bg-white p-4 sm:p-8 rounded-[32px] border border-black/5 shadow-sm text-left">
           <h3 className="text-xl font-medium mb-6 flex items-center gap-2">
             <Plus size={20} className="text-[#5A5A40]" />
             Yangi konkurs
@@ -95,7 +95,7 @@ export default function ContestsTab({ contestForm, setContestForm, handleCreateC
 
         <div className="space-y-6 text-left">
           <h3 className="text-xl font-medium px-4">Faol konkurslar</h3>
-          <div className="bg-[#5A5A40] text-white p-8 rounded-[32px] relative overflow-hidden">
+          <div className="bg-[#5A5A40] text-white p-6 sm:p-8 rounded-[32px] relative overflow-hidden">
             <div className="relative z-10">
               <span className="bg-white/20 text-white text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 inline-block">
                 Hozirda faol
