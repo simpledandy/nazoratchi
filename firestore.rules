@@ -1,0 +1,84 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Fields:
+//   - telegramId: string (required)
+//   - username: string
+//   - firstName: string (required)
+//   - lastName: string
+//   - joinedAt: timestamp (required)
+//   - isBot: boolean
+//
+// Collection: invites
+// Fields:
+//   - inviterId: string (required)
+//   - inviteeId: string (required)
+//   - timestamp: timestamp (required)
+//   - contestId: string (optional)
+//
+// Collection: leaves
+// Fields:
+//   - telegramId: string (required)
+//   - timestamp: timestamp (required)
+//
+// Collection: contests
+// Fields:
+//   - title: string (required)
+//   - startDate: timestamp (required)
+//   - endDate: timestamp (required)
+//   - prizes: string (required)
+//   - isActive: boolean (required)
+//   - imageUrl: string
+//
+// Collection: settings
+// Fields:
+//   - adminIds: list (required)
+//   - welcomeMessage: string
+//   - warningMessage: string
+//   - contestTemplate: string
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "kenjayevaruxsoraxonferps@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admin-only access for all collections
+    match /users/{userId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /invites/{inviteId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /leaves/{leaveId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /contests/{contestId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
