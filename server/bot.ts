@@ -332,6 +332,17 @@ Omad tilaymiz! 🚀
     }
   });
 
-  bot.launch();
-  console.log("Telegram bot started");
+  // Only launch polling if NOT running on Vercel
+  const isVercel = process.env.VERCEL === "1" || process.env.NOW_DEPLOYMENT !== undefined;
+  if (!isVercel) {
+    bot.launch()
+      .then(() => {
+        console.log("Telegram bot started in POLLING mode (local development)");
+      })
+      .catch((err) => {
+        console.error("Failed to start bot in polling mode:", err);
+      });
+  } else {
+    console.log("Running in Vercel/Serverless environment. Polling disabled; waiting for webhook updates.");
+  }
 }
