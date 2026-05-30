@@ -22,7 +22,7 @@ router.post("/auth/verify", async (req, res) => {
     }
     
     const { verifyCode } = await import("./auth-store.js");
-    const verified = verifyCode(code);
+    const verified = await verifyCode(code);
     
     if (!verified) {
       return res.status(400).json({ valid: false, error: "Xato yoki muddati o'tgan kod kiritildi!" });
@@ -517,7 +517,10 @@ router.get("/links", async (req, res) => {
 
     const { data: links, error } = await linkLogQuery;
     if (error) throw error;
-    res.json(links || []);
+    
+    // Filter out internal system verification logs
+    const filteredLinks = (links || []).filter((l: any) => l.sender_username !== "AUTH_CODE");
+    res.json(filteredLinks);
   } catch (error: any) {
     console.error("Error fetching links:", error);
     res.status(500).json({ error: error.message || "Failed to fetch link logs" });

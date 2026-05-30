@@ -273,7 +273,7 @@ Omad tilaymiz! 🚀
 
       // Generate verification code
       const { generateVerificationCode } = await import("./auth-store.js");
-      const code = generateVerificationCode(chatId, chatTitle, ctx.from.id.toString());
+      const code = await generateVerificationCode(chatId, chatTitle, ctx.from.id.toString());
 
       try {
         await ctx.telegram.sendMessage(
