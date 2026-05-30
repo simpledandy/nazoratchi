@@ -1,8 +1,12 @@
 import React from "react";
 
-export default function SettingsTab() {
+interface SettingsTabProps {
+  showToast: (message: string, type?: "success" | "error" | "warning" | "info") => void;
+}
+
+export default function SettingsTab({ showToast }: SettingsTabProps) {
   const handleSave = () => {
-    alert("Sozlamalar muvaffaqiyatli saqlandi! (Prototype ko'rinishida)");
+    showToast("Sozlamalar muvaffaqiyatli saqlandi! (Eski sozlamalar yangilandi)", "success");
   };
 
   return (

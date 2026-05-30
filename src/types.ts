@@ -4,6 +4,7 @@ export interface Stats {
   totalMembers: number;
   invites: any[];
   leaves: any[];
+  members: any[];
 }
 
 export interface LeaderboardItem {
@@ -12,4 +13,4 @@ export interface LeaderboardItem {
   name: string;
 }
 
-export type TabType = "dashboard" | "leaderboard" | "contests" | "settings";
+export type TabType = "dashboard" | "leaderboard" | "contests" | "settings" | "instructions";

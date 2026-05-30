@@ -41,14 +41,13 @@ export default function ContestsTab({
             <Plus size={20} className="text-[#5A5A40]" />
             Yangi konkurs
           </h3>
-          <form onSubmit={handleCreateContest} className="space-y-4">
+          <form onSubmit={handleCreateContest} noValidate className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-[#5A5A40] mb-2">Guruhni tanlang</label>
               <select
                 className="w-full bg-[#F5F5F0] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#5A5A40]/20 text-[#5A5A40] cursor-pointer"
                 value={contestForm.chatId}
                 onChange={e => setContestForm({...contestForm, chatId: e.target.value})}
-                required
               >
                 <option value="">-- Tanlang --</option>
                 {groups.map((g) => (
@@ -69,7 +68,6 @@ export default function ContestsTab({
                 className="w-full bg-[#F5F5F0] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#5A5A40]/20"
                 value={contestForm.title}
                 onChange={e => setContestForm({...contestForm, title: e.target.value})}
-                required
               />
             </div>
             
@@ -81,7 +79,6 @@ export default function ContestsTab({
                   className="w-full bg-[#F5F5F0] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#5A5A40]/20"
                   value={contestForm.startDate}
                   onChange={e => setContestForm({...contestForm, startDate: e.target.value})}
-                  required
                 />
               </div>
               <div>
@@ -91,7 +88,6 @@ export default function ContestsTab({
                   className="w-full bg-[#F5F5F0] border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#5A5A40]/20"
                   value={contestForm.endDate}
                   onChange={e => setContestForm({...contestForm, endDate: e.target.value})}
-                  required
                 />
               </div>
             </div>
@@ -103,7 +99,6 @@ export default function ContestsTab({
                 value={contestForm.prizes}
                 onChange={e => setContestForm({...contestForm, prizes: e.target.value})}
                 placeholder="Masalan:&#10;1-o'rin: iPhone 15&#10;2-o'rin: Airpods Pro"
-                required
               />
             </div>
             <div>

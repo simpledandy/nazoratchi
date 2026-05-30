@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle, X } from "lucide-react";
+import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle, X, BookOpen } from "lucide-react";
 import { TabType } from "../types";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -13,9 +13,16 @@ interface SidebarProps {
   setActiveTab: (tab: TabType) => void;
   isOpen: boolean;
   onClose: () => void;
+  configStatus?: {
+    supabaseConfigured: boolean;
+    telegramTokenConfigured: boolean;
+    botInitialized: boolean;
+    statusText: string;
+    statusCode: string;
+  };
 }
 
-export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose, configStatus }: SidebarProps) {
   const handleTabClick = (tab: TabType) => {
     setActiveTab(tab);
     onClose(); // Auto-close on mobile
@@ -59,19 +66,25 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: Si
             active={activeTab === "dashboard"} 
             onClick={() => handleTabClick("dashboard")}
             icon={<BarChart3 size={20} />}
-            label="Dashboard"
+            label="Tahlil va Monitoring"
           />
           <NavItem 
             active={activeTab === "leaderboard"} 
             onClick={() => handleTabClick("leaderboard")}
             icon={<Trophy size={20} />}
-            label="Leaderboard"
+            label="A'zolar Reytingi"
           />
           <NavItem 
             active={activeTab === "contests"} 
             onClick={() => handleTabClick("contests")}
             icon={<Calendar size={20} />}
-            label="Konkurslar"
+            label="Guruh Tanlovlari"
+          />
+          <NavItem 
+            active={activeTab === "instructions"} 
+            onClick={() => handleTabClick("instructions")}
+            icon={<BookOpen size={20} />}
+            label="Yo'riqnoma"
           />
           <NavItem 
             active={activeTab === "settings"} 
@@ -81,12 +94,36 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose }: Si
           />
         </nav>
 
-        <div className="mt-auto p-4 bg-[#F5F5F0] rounded-2xl border border-black/5 text-left">
-          <div className="flex items-center gap-2 text-xs text-[#5A5A40] font-medium uppercase tracking-wider mb-1">
-            <AlertCircle size={14} />
-            Status
+        <div className={cn(
+          "mt-auto p-4 rounded-2xl border text-left transition-all",
+          configStatus?.statusCode === "ACTIVE" 
+            ? "bg-emerald-50/70 border-emerald-500/15 text-emerald-950" 
+            : configStatus?.statusCode === "TELEGRAM_MISSING" || configStatus?.statusCode === "DEMO_ALL_MISSING"
+            ? "bg-amber-50/70 border-amber-500/15 text-amber-950"
+            : configStatus?.statusCode === "LOADING"
+            ? "bg-slate-50 border-black/5 text-slate-800 animate-pulse"
+            : "bg-rose-50/70 border-rose-500/15 text-rose-950"
+        )}>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider mb-1">
+            <span className={cn(
+              "w-2 h-2 rounded-full",
+              configStatus?.statusCode === "ACTIVE" ? "bg-emerald-500 animate-pulse" :
+              configStatus?.statusCode === "TELEGRAM_MISSING" || configStatus?.statusCode === "DEMO_ALL_MISSING" ? "bg-amber-500" :
+              configStatus?.statusCode === "LOADING" ? "bg-slate-400" : "bg-rose-500"
+            )} />
+            Tizim Statusi
           </div>
-          <p className="text-sm font-medium">Bot faol holatda</p>
+          <p className="text-xs font-semibold leading-relaxed">
+            {configStatus?.statusText || "Bot faol holatda"}
+          </p>
+          {configStatus?.statusCode !== "ACTIVE" && configStatus?.statusCode !== "LOADING" && (
+            <p 
+              className="text-[10px] mt-1.5 font-bold underline cursor-pointer hover:opacity-80 inline-block transition-opacity text-[#5A5A40]" 
+              onClick={() => handleTabClick("instructions")}
+            >
+              Muammolarni aniqlash ↗
+            </p>
+          )}
         </div>
       </div>
     </>

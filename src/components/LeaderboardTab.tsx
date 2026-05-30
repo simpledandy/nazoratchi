@@ -17,7 +17,7 @@ export default function LeaderboardTab({ leaderboard, fetchUserDetails }: Leader
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 text-left">
       <header>
-        <h2 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Leaderboard</h2>
+        <h2 className="text-3xl sm:text-4xl font-light tracking-tight mb-2">Reyting Jadvali</h2>
         <p className="text-[#5A5A40]/60 italic text-sm sm:text-base">Eng ko'p taklif qilgan foydalanuvchilar</p>
       </header>
 

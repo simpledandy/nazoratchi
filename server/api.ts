@@ -5,6 +5,40 @@ import { bot } from "./bot.js";
 const router = Router();
 
 // API Routes
+router.get("/config-status", (req, res) => {
+  const supabaseConfigured = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
+  const telegramTokenConfigured = !!process.env.TELEGRAM_BOT_TOKEN;
+  const botInitialized = bot !== null;
+  
+  let statusText = "Bot faol holatda";
+  let statusCode = "SUCCESS";
+  
+  if (!supabaseConfigured && !telegramTokenConfigured) {
+    statusText = "Bot va Baza sozlanmagan (Demo rejim)";
+    statusCode = "DEMO_ALL_MISSING";
+  } else if (!supabaseConfigured) {
+    statusText = "Baza sozlanmagan (Supabase ulanmagan)";
+    statusCode = "SUPABASE_MISSING";
+  } else if (!telegramTokenConfigured) {
+    statusText = "Bot token moduli yo'q (Faqat baza faol)";
+    statusCode = "TELEGRAM_MISSING";
+  } else if (!botInitialized) {
+    statusText = "Bot ishga tushmagan (Tokenni tekshiring)";
+    statusCode = "BOT_ERROR";
+  } else {
+    statusText = "Bot faol holatda (Baza bog'langan)";
+    statusCode = "ACTIVE";
+  }
+
+  res.json({
+    supabaseConfigured,
+    telegramTokenConfigured,
+    botInitialized,
+    statusText,
+    statusCode
+  });
+});
+
 router.get("/groups", async (req, res) => {
   try {
     const dbClient = checkDatabase();
@@ -75,22 +109,108 @@ router.get("/stats", async (req, res) => {
     }
     const [invitesListRes, leavesListRes] = await Promise.all([invitesListQuery, leavesListQuery]);
 
+    // Retrieve respective members (either via memberships of a group, or global users if no chatId)
+    let membersListRes;
+    if (chatId) {
+      membersListRes = await dbClient
+        .from("memberships")
+        .select("*")
+        .eq("chat_id", chatId)
+        .order("joined_at", { ascending: false });
+    } else {
+      membersListRes = await dbClient
+        .from("users")
+        .select("*")
+        .order("joined_at", { ascending: false });
+    }
+
+    // Build unique set of involved User IDs to resolve all names in a single query
+    const uniqueUserIds = new Set<string>();
+    
+    if (membersListRes.data) {
+      membersListRes.data.forEach((m: any) => {
+        if (m.telegram_id) uniqueUserIds.add(m.telegram_id);
+      });
+    }
+    if (invitesListRes.data) {
+      invitesListRes.data.forEach((inv: any) => {
+        if (inv.inviter_id) uniqueUserIds.add(inv.inviter_id);
+        if (inv.invitee_id) uniqueUserIds.add(inv.invitee_id);
+      });
+    }
+    if (leavesListRes.data) {
+      leavesListRes.data.forEach((l: any) => {
+        if (l.telegram_id) uniqueUserIds.add(l.telegram_id);
+      });
+    }
+
+    const userIdList = Array.from(uniqueUserIds);
+    const userMap: Record<string, { first_name: string; last_name: string; username: string, joined_at: string }> = {};
+
+    if (userIdList.length > 0) {
+      const { data: usersData } = await dbClient
+        .from("users")
+        .select("telegram_id, username, first_name, last_name, joined_at")
+        .in("telegram_id", userIdList);
+
+      if (usersData) {
+        usersData.forEach((u: any) => {
+          userMap[u.telegram_id] = {
+            first_name: u.first_name || "",
+            last_name: u.last_name || "",
+            username: u.username || "",
+            joined_at: u.joined_at || ""
+          };
+        });
+      }
+    }
+
+    const resInvites = (invitesListRes.data || []).map((inv: any) => {
+      const inviter = userMap[inv.inviter_id];
+      const invitee = userMap[inv.invitee_id];
+      return {
+        inviterId: inv.inviter_id,
+        inviterName: inviter ? `${inviter.first_name} ${inviter.last_name}`.trim() : "Noma'lum foydalanuvchi",
+        inviterUsername: inviter?.username || "",
+        inviteeId: inv.invitee_id,
+        inviteeName: invitee ? `${invitee.first_name} ${invitee.last_name}`.trim() : "Noma'lum foydalanuvchi",
+        inviteeUsername: invitee?.username || "",
+        chatId: inv.chat_id,
+        timestamp: inv.timestamp,
+        contestId: inv.contest_id
+      };
+    });
+
+    const resLeaves = (leavesListRes.data || []).map((l: any) => {
+      const leaver = userMap[l.telegram_id];
+      return {
+        telegramId: l.telegram_id,
+        name: leaver ? `${leaver.first_name} ${leaver.last_name}`.trim() : "Noma'lum foydalanuvchi",
+        username: leaver?.username || "",
+        chatId: l.chat_id,
+        timestamp: l.timestamp
+      };
+    });
+
+    const resMembers = (membersListRes.data || []).map((m: any) => {
+      // Resolve name from userMap / fall back
+      const u = userMap[m.telegram_id];
+      return {
+        telegramId: m.telegram_id,
+        username: m.username || u?.username || "",
+        firstName: m.first_name || u?.first_name || "A'zo",
+        lastName: m.last_name || u?.last_name || "",
+        joinedAt: m.joined_at || u?.joined_at || ""
+      };
+    });
+
     res.json({
       totalInvites: invitesCountRes.count || invitesListRes.data?.length || 0,
       totalLeaves: leavesCountRes.count || leavesListRes.data?.length || 0,
       totalMembers: totalMembersCount,
-      invites: (invitesListRes.data || []).map((inv: any) => ({
-        inviterId: inv.inviter_id,
-        inviteeId: inv.invitee_id,
-        chatId: inv.chat_id,
-        timestamp: inv.timestamp,
-        contestId: inv.contest_id
-      })),
-      leaves: (leavesListRes.data || []).map((l: any) => ({
-        telegramId: l.telegram_id,
-        chatId: l.chat_id,
-        timestamp: l.timestamp
-      }))
+      invites: resInvites,
+      leaves: resLeaves,
+      members: resMembers
     });
   } catch (error: any) {
     console.error("Error getting stats:", error);
