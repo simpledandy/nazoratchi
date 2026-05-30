@@ -253,6 +253,67 @@ Omad tilaymiz! 🚀
     }
   });
 
+  // /auth command to generate dynamic 6-digit admin verification codes
+  bot.hears(/^\/auth/i, async (ctx) => {
+    try {
+      if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
+        return ctx.reply("Ushbu buyruqni faqat guruhlarda ishlatish mumkin.");
+      }
+
+      const chatId = ctx.chat.id.toString();
+      const chatTitle = (ctx.chat as any).title || "Guruh";
+
+      // Robust admin check using ctx.getChatAdministrators()
+      const admins = await ctx.getChatAdministrators();
+      const isUserAdminOrCreator = admins.some(a => a.user.id === ctx.from.id);
+
+      if (!isUserAdminOrCreator) {
+        return ctx.reply("Ushbu buyruq faqat guruh adminlari yoki egasi uchun ruxsat etilgan!");
+      }
+
+      // Generate verification code
+      const { generateVerificationCode } = await import("./auth-store.js");
+      const code = generateVerificationCode(chatId, chatTitle, ctx.from.id.toString());
+
+      try {
+        await ctx.telegram.sendMessage(
+          ctx.from.id,
+          `🗝 **Guruh:** *${chatTitle}*\n` +
+          `🔐 **Tasdiqlash kodi:** \`${code}\`\n\n` +
+          `Ushbu kodni nusxalab, monitoring boshqaruv paneliga kiriting. Kod 10 daqiqa davomida faoldir.`,
+          { parse_mode: "Markdown" }
+        );
+
+        const replyMsg = await ctx.reply(`Psst, ${ctx.from.first_name}! 🔑 Kirish kodi sizga shaxsiy xabar (DM) orqali yuborildi. Iltimos, shaxsiy chatingizni tekshiring.`);
+        setTimeout(async () => {
+          try { await ctx.telegram.deleteMessage(chatId, replyMsg.message_id); } catch(e) {}
+        }, 15000);
+      } catch (err) {
+        // If DM fails (user hasn't started the bot in DM)
+        const replyMsg = await ctx.reply(
+          `⚠️ **${ctx.from.first_name}**, sizga shaxsiy xabar yuborib bo'lmadi.\n\n` +
+          `Men sizga to'g'ridan-to'g'ri kod yuborishim uchun avval shaxsiy chatda botimizga kirib, **boshlash (/start)** tugmasini bosing!\n\n` +
+          `Sizning vaqtinchalik kirish kotingiz (Xavfsizlik uchun bu xabar 30 soniyadan so'ng o'chiriladi):\n` +
+          `➡️ \`${code}\``,
+          { parse_mode: "Markdown" }
+        );
+
+        setTimeout(async () => {
+          try { await ctx.telegram.deleteMessage(chatId, replyMsg.message_id); } catch(e) {}
+        }, 30000);
+      }
+
+      // Delete the trigger message from the group to keep chat tidy
+      try { await ctx.deleteMessage(); } catch(e) {}
+
+    } catch (err: any) {
+      console.error("Auth command error:", err);
+      try {
+        await ctx.reply(`Xatolik yuz berdi: ${err.message}`);
+      } catch (e) {}
+    }
+  });
+
   // /sync command to bootstrap admins & get real-time statistics
   bot.hears(/^\/sync/i, async (ctx) => {
     try {

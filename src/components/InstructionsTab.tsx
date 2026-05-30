@@ -9,7 +9,8 @@ import {
   Copy, 
   Check,
   ExternalLink,
-  Info
+  Info,
+  Key
 } from "lucide-react";
 
 interface InstructionSection {
@@ -31,26 +32,32 @@ export default function InstructionsTab() {
       subtitle: "Botni guruhga qo'shish va guruhlarni aniqlash"
     },
     {
+      id: "admin-auth",
+      title: "2. Admin tasdiqlash",
+      icon: <Key size={18} />,
+      subtitle: "Tizimga kirish va guruhni boshqarish ruxsati"
+    },
+    {
       id: "admin-rights",
-      title: "2. Adminlik huquqlari",
+      title: "3. Adminlik huquqlari",
       icon: <ShieldCheck size={18} />,
       subtitle: "Nima uchun admin qilish kerak va u qanday ishlaydi"
     },
     {
       id: "sync",
-      title: "3. Guruhni sinxronlash",
+      title: "4. Guruhni sinxronlash",
       icon: <RefreshCw size={18} />,
       subtitle: "/sync buyrug'ining ahamiyati va ma'lumotlar"
     },
     {
       id: "contests",
-      title: "4. Konkurslar va Tanlovlar",
+      title: "5. Konkurslar va Tanlovlar",
       icon: <Trophy size={18} />,
       subtitle: "Guruhda konkurs yaratish darsligi"
     },
     {
       id: "trouble",
-      title: "5. Nosozliklarni tuzatish",
+      title: "6. Nosozliklarni tuzatish",
       icon: <AlertTriangle size={18} />,
       subtitle: "Muammolarni tahlil qilish va hal etish"
     }
@@ -173,6 +180,60 @@ export default function InstructionsTab() {
                   <p className="text-xs font-bold text-[#5A5A40]">Eslatma:</p>
                   <p className="text-xs leading-relaxed text-[#5A5A40]/80">
                     Botimiz guruhlarga hech qachon keraksiz xabarlar yozmaydi yoki foydalanuvchilarni bezovta qilmaydi. U faqat belgilangan taqiqlar (masalan, reklama havolalari) va yangi a'zolar taklif qilinishini zimdan nazorat qiladi.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === "admin-auth" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex items-center gap-3 border-b border-black/5 pb-4">
+                <div className="w-10 h-10 bg-amber-50 text-amber-700 rounded-xl flex items-center justify-center font-sans font-bold">
+                  <Key size={18} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Adminlikni tasdiqlash va kirish (/auth)</h3>
+                  <p className="text-xs text-[#5A5A40]/60">Panelga xavfsiz ulanish yo'riqnomasi</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 text-sm leading-relaxed text-[#4a4a4a]">
+                <p>
+                  Ushbu tizimning xavfsizligi guruh ma'lumotlarini ruxsatsiz shaxslardan himoyalashga mo'ljallangan. Panelga faqat guruhning rasmiy administratorlari kira oladi.
+                </p>
+
+                <h4 className="font-bold text-[#1a1a1a] mt-4 font-sans text-sm">Bosqichma-bosqich yo'riqnoma:</h4>
+                <div className="relative pl-6 border-l border-amber-200 space-y-4">
+                  <div className="space-y-1">
+                    <span className="absolute left-0 top-1 -translate-x-1/2 w-4 h-4 bg-amber-600 rounded-full text-white text-[10px] font-bold flex items-center justify-center">1</span>
+                    <h5 className="font-bold text-[#1a1a1a]">Guruhda /auth buyrug'ini yuboring</h5>
+                    <p className="text-xs font-sans">
+                      Siz admin bo'lgan va bot qo'shilgan Telegram guruhiga kiring va matn maydonida <strong>/auth</strong> buyrug'ini yuboring. Buyruq yuborilgach, bot uni guruhdagi shovqinni kamaytirish va xavfsizlik maqsadida darhol o'chirib yuboradi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 font-sans">
+                    <span className="absolute left-0 top-[96px] -translate-x-1/2 w-4 h-4 bg-amber-600 rounded-full text-white text-[10px] font-bold flex items-center justify-center">2</span>
+                    <h5 className="font-bold text-[#1a1a1a]">6 xonali tasdiqlash kodini oling</h5>
+                    <p className="text-xs">
+                      Bot sizga shaxsiy xabar (DM) orqali kodingizni yuboradi. Agar bot sizga shaxsiy xabar yubora olmasa, guruhda vaqtinchalik xabar yuborib, u xabarni 30 soniyadan so'ng o'chirib tashlaydi. Bot sizga shaxsiy yozishi uchun avval botning shaxsiy chatiga kirib <strong>"Start"</strong> buyrug'ini bosgan bo'lishingiz tavsiya etiladi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 font-sans">
+                    <span className="absolute left-0 top-[204px] -translate-x-1/2 w-4 h-4 bg-amber-600 rounded-full text-white text-[10px] font-bold flex items-center justify-center">3</span>
+                    <h5 className="font-bold text-[#1a1a1a]">Kodni monitoring paneliga kiriting</h5>
+                    <p className="text-xs">
+                      Olingan 6 xonali kodni saytdagi <strong>"Tasdiqlash kodi"</strong> maydoniga kiriting va "Tasdiqlash" tugmasini bosing. Kod kiritilgandan so'ng, tizim uning haqiqiyligini tekshiradi va u guruhni profilingizga biriktiradi.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 mt-4 space-y-1">
+                  <p className="text-xs font-bold text-[#5A5A40]">Muddati:</p>
+                  <p className="text-xs leading-relaxed text-[#5A5A40]/80">
+                    Sizga yuborilgan tasdiqlash kodi vaqtinchalik bo'lib, <strong>10 daqiqa</strong> davomida faol bo'ladi. Muddati o'tib ketgan bo'lsa, guruhda qaytadan <code className="text-emerald-800">/auth</code> buyrug'ini yuboring.
                   </p>
                 </div>
               </div>

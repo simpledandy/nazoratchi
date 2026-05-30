@@ -4,7 +4,41 @@ import { bot } from "./bot.js";
 
 const router = Router();
 
+// Helper to extract verified chat IDs list from headers
+function getVerifiedChats(req: any): string[] {
+  const verifiedHeader = req.headers["x-verified-chats"] as string;
+  if (!verifiedHeader) return [];
+  return verifiedHeader.split(",").filter(Boolean);
+}
+
 // API Routes
+
+// Verification endpoint for 6-digit codes
+router.post("/auth/verify", async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ valid: false, error: "Tasdiqlash kodi kiritilmagan!" });
+    }
+    
+    const { verifyCode } = await import("./auth-store.js");
+    const verified = verifyCode(code);
+    
+    if (!verified) {
+      return res.status(400).json({ valid: false, error: "Xato yoki muddati o'tgan kod kiritildi!" });
+    }
+    
+    res.json({
+      valid: true,
+      chatId: verified.chatId,
+      chatTitle: verified.chatTitle
+    });
+  } catch (error: any) {
+    console.error("Auth verify error:", error);
+    res.status(500).json({ valid: false, error: error.message || "Tizim xatoligi yuz berdi" });
+  }
+});
+
 router.get("/config-status", (req, res) => {
   const supabaseConfigured = !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY;
   const telegramTokenConfigured = !!process.env.TELEGRAM_BOT_TOKEN;
@@ -41,10 +75,17 @@ router.get("/config-status", (req, res) => {
 
 router.get("/groups", async (req, res) => {
   try {
+    const verifiedChatIds = getVerifiedChats(req);
+    if (verifiedChatIds.length === 0) {
+      // Return empty if not verified yet
+      return res.json([]);
+    }
+
     const dbClient = checkDatabase();
     const { data: groups, error } = await dbClient
       .from("groups")
       .select("*")
+      .in("id", verifiedChatIds)
       .order("title", { ascending: true });
       
     if (error) throw error;
@@ -58,6 +99,16 @@ router.get("/groups", async (req, res) => {
 router.get("/stats", async (req, res) => {
   try {
     const { chatId } = req.query;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (chatId && !verifiedChatIds.includes(chatId as string)) {
+      return res.status(403).json({ error: "Ushbu guruh ma'lumotlarini ko'rishga ruxsatingiz yo'q!" });
+    }
+
     const dbClient = checkDatabase();
     
     let invitesCountQuery = dbClient.from("invites").select("*", { count: "exact", head: true });
@@ -66,6 +117,9 @@ router.get("/stats", async (req, res) => {
     if (chatId) {
       invitesCountQuery = invitesCountQuery.eq("chat_id", chatId);
       leavesCountQuery = leavesCountQuery.eq("chat_id", chatId);
+    } else {
+      invitesCountQuery = invitesCountQuery.in("chat_id", verifiedChatIds);
+      leavesCountQuery = leavesCountQuery.in("chat_id", verifiedChatIds);
     }
 
     const [invitesCountRes, leavesCountRes] = await Promise.all([
@@ -96,8 +150,9 @@ router.get("/stats", async (req, res) => {
       }
     } else {
       const { count } = await dbClient
-        .from("users")
-        .select("*", { count: "exact", head: true });
+        .from("memberships")
+        .select("*", { count: "exact", head: true })
+        .in("chat_id", verifiedChatIds);
       totalMembersCount = count || 0;
     }
 
@@ -106,6 +161,9 @@ router.get("/stats", async (req, res) => {
     if (chatId) {
       invitesListQuery = invitesListQuery.eq("chat_id", chatId);
       leavesListQuery = leavesListQuery.eq("chat_id", chatId);
+    } else {
+      invitesListQuery = invitesListQuery.in("chat_id", verifiedChatIds);
+      leavesListQuery = leavesListQuery.in("chat_id", verifiedChatIds);
     }
     const [invitesListRes, leavesListRes] = await Promise.all([invitesListQuery, leavesListQuery]);
 
@@ -119,8 +177,9 @@ router.get("/stats", async (req, res) => {
         .order("joined_at", { ascending: false });
     } else {
       membersListRes = await dbClient
-        .from("users")
+        .from("memberships")
         .select("*")
+        .in("chat_id", verifiedChatIds)
         .order("joined_at", { ascending: false });
     }
 
@@ -193,7 +252,6 @@ router.get("/stats", async (req, res) => {
     });
 
     const resMembers = (membersListRes.data || []).map((m: any) => {
-      // Resolve name from userMap / fall back
       const u = userMap[m.telegram_id];
       return {
         telegramId: m.telegram_id,
@@ -221,11 +279,23 @@ router.get("/stats", async (req, res) => {
 router.get("/leaderboard", async (req, res) => {
   try {
     const { chatId } = req.query;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (chatId && !verifiedChatIds.includes(chatId as string)) {
+      return res.status(403).json({ error: "Ushbu guruh ma'lumotlarini ko'rishga ruxsatingiz yo'q!" });
+    }
+
     const dbClient = checkDatabase();
     
     let invitesQuery = dbClient.from("invites").select("inviter_id");
     if (chatId) {
       invitesQuery = invitesQuery.eq("chat_id", chatId);
+    } else {
+      invitesQuery = invitesQuery.in("chat_id", verifiedChatIds);
     }
 
     const { data: invites, error } = await invitesQuery;
@@ -267,6 +337,16 @@ router.get("/users/:id/details", async (req, res) => {
   try {
     const userId = req.params.id;
     const { chatId } = req.query;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (chatId && !verifiedChatIds.includes(chatId as string)) {
+      return res.status(403).json({ error: "Ushbu guruh ma'lumotlarini ko'rishga ruxsatingiz yo'q!" });
+    }
+
     const dbClient = checkDatabase();
     
     const { data: userData } = await dbClient
@@ -278,6 +358,8 @@ router.get("/users/:id/details", async (req, res) => {
     let invitesQuery = dbClient.from("invites").select("*").eq("inviter_id", userId);
     if (chatId) {
       invitesQuery = invitesQuery.eq("chat_id", chatId);
+    } else {
+      invitesQuery = invitesQuery.in("chat_id", verifiedChatIds);
     }
     const { data: invites, error } = await invitesQuery;
     if (error) throw error;
@@ -330,6 +412,16 @@ router.get("/users/:id/details", async (req, res) => {
 router.post("/contests", async (req, res) => {
   try {
     const contest = req.body;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (!contest.chatId || !verifiedChatIds.includes(contest.chatId)) {
+      return res.status(403).json({ error: "Ushbu guruhda konkurs yaratish ruxsati berilmagan!" });
+    }
+
     const dbClient = checkDatabase();
     const { data, error } = await dbClient
       .from("contests")
@@ -358,10 +450,22 @@ router.post("/contests", async (req, res) => {
 router.get("/contests", async (req, res) => {
   try {
     const { chatId } = req.query;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (chatId && !verifiedChatIds.includes(chatId as string)) {
+      return res.status(403).json({ error: "Ushbu guruh konkurslarini ko'rishga ruxsatingiz yo'q!" });
+    }
+
     const dbClient = checkDatabase();
     let contestsQuery = dbClient.from("contests").select("*");
     if (chatId) {
       contestsQuery = contestsQuery.eq("chat_id", chatId);
+    } else {
+      contestsQuery = contestsQuery.in("chat_id", verifiedChatIds);
     }
     const { data: contests, error } = await contestsQuery;
     if (error) throw error;
@@ -388,6 +492,16 @@ router.get("/contests", async (req, res) => {
 router.get("/links", async (req, res) => {
   try {
     const { chatId } = req.query;
+    const verifiedChatIds = getVerifiedChats(req);
+
+    if (verifiedChatIds.length === 0) {
+      return res.status(401).json({ error: "Siz hali guruh admini sifatida tizimga kirmagansiz!" });
+    }
+
+    if (chatId && !verifiedChatIds.includes(chatId as string)) {
+      return res.status(403).json({ error: "Ushbu guruh havolalarini ko'rishga ruxsatingiz yo'q!" });
+    }
+
     const dbClient = checkDatabase();
     let linkLogQuery = dbClient
       .from("link_logs")
@@ -397,6 +511,8 @@ router.get("/links", async (req, res) => {
 
     if (chatId) {
       linkLogQuery = linkLogQuery.eq("chat_id", chatId);
+    } else {
+      linkLogQuery = linkLogQuery.in("chat_id", verifiedChatIds);
     }
 
     const { data: links, error } = await linkLogQuery;
