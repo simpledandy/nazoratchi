@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Users, UserPlus, UserMinus, Calendar } from "lucide-react";
+import { Users, UserPlus, UserMinus, Calendar, Link as LinkIcon, Shield, Trash2, Eye } from "lucide-react";
 import { 
   XAxis, 
   YAxis, 
@@ -16,9 +16,10 @@ import StatCard from "./ui/StatCard";
 
 interface DashboardTabProps {
   stats: Stats | null;
+  links?: any[];
 }
 
-export default function DashboardTab({ stats }: DashboardTabProps) {
+export default function DashboardTab({ stats, links = [] }: DashboardTabProps) {
   const chartData = useMemo(() => {
     if (!stats) return [];
     
@@ -110,6 +111,83 @@ export default function DashboardTab({ stats }: DashboardTabProps) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Link Logs / Moderation Section */}
+      <div className="bg-white p-4 sm:p-8 rounded-[32px] border border-black/5 shadow-sm text-left">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-medium flex items-center gap-2">
+              <LinkIcon size={20} className="text-[#5A5A40]" />
+              Havolalar Audit Logi (Supabase)
+            </h3>
+            <p className="text-xs text-[#5A5A40]/70 italic mt-1">Bot tomonidan aniqlangan va boshqariladigan guruh havolalari logi</p>
+          </div>
+          <span className="text-xs font-mono bg-amber-50 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-100">
+            Real-vaqtdgi nazorat
+          </span>
+        </div>
+
+        {links.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 bg-[#F5F5F0]/30 rounded-2xl border border-dashed border-black/5">
+            <Eye size={36} className="text-[#5A5A40]/40 mb-2 animate-pulse" />
+            <p className="text-sm text-[#5A5A40]/70 italic">Hozircha guruhda hech qanday tashqi havola qayd etilmadi.</p>
+            <p className="text-xs text-[#5A5A40]/50 mt-1">Guruhda link joylanganda, ushbu ro'yxatda avtomatik ko'rinadi.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-sans text-sm">
+              <thead>
+                <tr className="border-b border-black/5 text-[#5A5A40]/60 text-xs uppercase tracking-wider">
+                  <th className="py-3 px-4 font-bold">Yuboruvchi</th>
+                  <th className="py-3 px-4 font-bold">Xabar</th>
+                  <th className="py-3 px-4 font-bold">Topilgan Havolalar</th>
+                  <th className="py-3 px-4 font-bold text-center">Holati / Amal</th>
+                  <th className="py-3 px-4 font-bold text-right">Sana</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/5">
+                {links.map((log: any) => (
+                  <tr key={log.id} className="hover:bg-[#F5F5F0]/30 transition-colors">
+                    <td className="py-3.5 px-4 font-medium text-[#1a1a1a]">
+                      <div className="font-semibold">{log.sender_name}</div>
+                      {log.sender_username && (
+                        <div className="text-xs text-[#5A5A40]/60">@{log.sender_username}</div>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#5a5a5a] max-w-xs truncate" title={log.message_text}>
+                      {log.message_text}
+                    </td>
+                    <td className="py-3.5 px-4 text-xs font-mono text-blue-600 break-all select-all">
+                      {log.extracted_link}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      {log.is_deleted ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold leading-none bg-rose-50 text-rose-700 px-2.5 py-1.5 rounded-full border border-rose-100">
+                          <Trash2 size={12} /> O'chirildi (Taqiqlangan)
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold leading-none bg-emerald-50 text-emerald-700 px-2.5 py-1.5 rounded-full border border-emerald-100">
+                          <Shield size={12} /> Ruxsat etildi (Admin)
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right text-xs text-[#5A5A40]/60">
+                      {new Date(log.timestamp).toLocaleString("uz-UZ", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric"
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

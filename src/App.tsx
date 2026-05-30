@@ -15,6 +15,7 @@ export default function App() {
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [contests, setContests] = useState<any[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -47,17 +48,19 @@ export default function App() {
     try {
       setLoading(true);
       const queryParam = groupId ? `?chatId=${groupId}` : "";
-      const [statsRes, leaderboardRes, groupsRes, contestsRes] = await Promise.all([
+      const [statsRes, leaderboardRes, groupsRes, contestsRes, linksRes] = await Promise.all([
         fetch(`/api/stats${queryParam}`),
         fetch(`/api/leaderboard${queryParam}`),
         fetch("/api/groups"),
-        fetch(`/api/contests${queryParam}`)
+        fetch(`/api/contests${queryParam}`),
+        fetch(`/api/links${queryParam}`)
       ]);
       
       if (statsRes.ok) setStats(await statsRes.json());
       if (leaderboardRes.ok) setLeaderboard(await leaderboardRes.json());
       if (groupsRes.ok) setGroups(await groupsRes.json());
       if (contestsRes.ok) setContests(await contestsRes.json());
+      if (linksRes.ok) setLinks(await linksRes.json());
     } catch (error) {
       console.error("Ma'lumotlarni yuklashda xatolik:", error);
     } finally {
@@ -200,7 +203,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "dashboard" && <DashboardTab stats={stats} />}
+        {activeTab === "dashboard" && <DashboardTab stats={stats} links={links} />}
         
         {activeTab === "leaderboard" && (
           <LeaderboardTab 
