@@ -66,19 +66,19 @@ export default function DashboardTab({ stats }: DashboardTabProps) {
           icon={<Users className="text-blue-600" />} 
           label="Jami a'zolar" 
           value={stats?.totalMembers || 0} 
-          subValue="+12% o'sish"
+          subValue="Tizimda ro'yxatga olinganlar"
         />
         <StatCard 
           icon={<UserPlus className="text-emerald-600" />} 
           label="Jami takliflar" 
           value={stats?.totalInvites || 0} 
-          subValue="Barcha vaqt"
+          subValue="Guruhga qo'shilganlar"
         />
         <StatCard 
           icon={<UserMinus className="text-rose-600" />} 
           label="Chiqib ketganlar" 
           value={stats?.totalLeaves || 0} 
-          subValue="Barcha vaqt"
+          subValue="Bot qo'shilgandan keyin"
         />
       </div>
 

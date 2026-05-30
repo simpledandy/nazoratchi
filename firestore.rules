@@ -44,41 +44,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper Functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email == "kenjayevaruxsoraxonferps@gmail.com" && request.auth.token.email_verified == true);
-    }
-
-    // Default deny
     match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Admin-only access for all collections
-    match /users/{userId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /invites/{inviteId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /leaves/{leaveId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /contests/{contestId} {
-      allow read, write: if isAdmin();
-    }
-
-    match /settings/{settingId} {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
     }
   }
 }
