@@ -212,7 +212,8 @@ if (bot) {
 
   // #contest command
   bot.hears(/#contest/i, async (ctx) => {
-    const chatId = ctx.chat.id.toString();
+    const chatId = ctx.chat?.id?.toString();
+    if (!chatId) return;
     try {
       const dbClient = checkDatabase();
       const { data: activeContest } = await dbClient
@@ -227,26 +228,26 @@ if (bot) {
       }
 
       const contest = activeContest[0];
-      const message = `
-🌟 **Yangi Konkurs Boshlandi!** 🌟
-
-📝 **Nomi:** ${contest.title}
-📅 **Boshlanish:** ${new Date(contest.start_date).toLocaleDateString()}
-🏁 **Tugash:** ${new Date(contest.end_date).toLocaleDateString()}
-
-🎁 **Sovrinlar:**
-${contest.prizes}
-
-ℹ️ **Qatnashish sharti:**
-Guruhga do'stlaringizni qo'shing va eng ko'p odam qo'shganlar orasida g'olib bo'ling!
-
-Omad tilaymiz! 🚀
-      `;
+      const escapedTitle = (contest.title || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const escapedPrizes = (contest.prizes || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      
+      const message = `🌟 <b>Yangi Konkurs Boshlandi!</b> 🌟\n\n` +
+                      `📝 <b>Nomi:</b> ${escapedTitle}\n` +
+                      `📅 <b>Boshlanish:</b> ${new Date(contest.start_date).toLocaleDateString()}\n` +
+                      `🏁 <b>Tugash:</b> ${new Date(contest.end_date).toLocaleDateString()}\n\n` +
+                      `🎁 <b>Sovrinlar:</b>\n${escapedPrizes}\n\n` +
+                      `ℹ️ <b>Qatnashish sharti:</b>\n` +
+                      `Guruhga do'stlaringizni qo'shing va eng ko'p odam qo'shganlar orasida g'olib bo'ling!\n\n` +
+                      `Omad tilaymiz! 🚀`;
 
       if (contest.image_url) {
-        await ctx.replyWithPhoto(contest.image_url, { caption: message, parse_mode: "Markdown" });
+        try {
+          await ctx.replyWithPhoto(contest.image_url, { caption: message, parse_mode: "HTML" });
+        } catch (e) {
+          await ctx.reply(message, { parse_mode: "HTML" });
+        }
       } else {
-        await ctx.reply(message, { parse_mode: "Markdown" });
+        await ctx.reply(message, { parse_mode: "HTML" });
       }
     } catch (err) {
       console.error("Error showing active contest command:", err);
@@ -254,7 +255,7 @@ Omad tilaymiz! 🚀
   });
 
   // /auth command to generate dynamic 6-digit admin verification codes
-  bot.hears(/^\/auth/i, async (ctx) => {
+  bot.command("auth", async (ctx) => {
     try {
       if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
         return ctx.reply("Ushbu buyruqni faqat guruhlarda ishlatish mumkin.");
@@ -263,9 +264,23 @@ Omad tilaymiz! 🚀
       const chatId = ctx.chat.id.toString();
       const chatTitle = (ctx.chat as any).title || "Guruh";
 
+      if (!ctx.from) {
+        return ctx.reply("Foydalanuvchi ma'lumotlarini aniqlab bo'lmadi.");
+      }
+
       // Robust admin check using ctx.getChatAdministrators()
-      const admins = await ctx.getChatAdministrators();
-      const isUserAdminOrCreator = admins.some(a => a.user.id === ctx.from.id);
+      let isUserAdminOrCreator = false;
+      try {
+        const admins = await ctx.getChatAdministrators();
+        isUserAdminOrCreator = admins.some(a => a.user.id === ctx.from?.id);
+      } catch (adminErr) {
+        console.error("Failed to query admins in /auth:", adminErr);
+        return ctx.reply(
+          `⚠️ <b>Xatolik:</b> Guruh administratorlari ro'yxatini olib bo'lmadi.\n\n` +
+          `Iltimos, bot guruhda administrator ekanligini va "Xabarlarni o'chirish" ruxsati borligini tekshiring!`,
+          { parse_mode: "HTML" }
+        );
+      }
 
       if (!isUserAdminOrCreator) {
         return ctx.reply("Ushbu buyruq faqat guruh adminlari yoki egasi uchun ruxsat etilgan!");
@@ -275,27 +290,33 @@ Omad tilaymiz! 🚀
       const { generateVerificationCode } = await import("./auth-store.js");
       const code = await generateVerificationCode(chatId, chatTitle, ctx.from.id.toString());
 
+      const escapedTitle = chatTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const escapedName = (ctx.from.first_name || "Admin").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
       try {
         await ctx.telegram.sendMessage(
           ctx.from.id,
-          `🗝 **Guruh:** *${chatTitle}*\n` +
-          `🔐 **Tasdiqlash kodi:** \`${code}\`\n\n` +
+          `🗝 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
+          `🔐 <b>Tasdiqlash kodi:</b> <code>${code}</code>\n\n` +
           `Ushbu kodni nusxalab, monitoring boshqaruv paneliga kiriting. Kod 10 daqiqa davomida faoldir.`,
-          { parse_mode: "Markdown" }
+          { parse_mode: "HTML" }
         );
 
-        const replyMsg = await ctx.reply(`Psst, ${ctx.from.first_name}! 🔑 Kirish kodi sizga shaxsiy xabar (DM) orqali yuborildi. Iltimos, shaxsiy chatingizni tekshiring.`);
+        const replyMsg = await ctx.reply(
+          `Psst, <b>${escapedName}</b>! 🔑 Kirish kodi sizga shaxsiy xabar (DM) orqali yuborildi. Iltimos, shaxsiy chatingizni tekshiring.`,
+          { parse_mode: "HTML" }
+        );
         setTimeout(async () => {
           try { await ctx.telegram.deleteMessage(chatId, replyMsg.message_id); } catch(e) {}
         }, 15000);
       } catch (err) {
         // If DM fails (user hasn't started the bot in DM)
         const replyMsg = await ctx.reply(
-          `⚠️ **${ctx.from.first_name}**, sizga shaxsiy xabar yuborib bo'lmadi.\n\n` +
-          `Men sizga to'g'ridan-to'g'ri kod yuborishim uchun avval shaxsiy chatda botimizga kirib, **boshlash (/start)** tugmasini bosing!\n\n` +
-          `Sizning vaqtinchalik kirish kotingiz (Xavfsizlik uchun bu xabar 30 soniyadan so'ng o'chiriladi):\n` +
-          `➡️ \`${code}\``,
-          { parse_mode: "Markdown" }
+          `⚠️ <b>${escapedName}</b>, sizga shaxsiy xabar yuborib bo'lmadi.\n\n` +
+          `Men sizga to'g'ridan-to'g'ri kod yuborishim uchun avval shaxsiy chatda botimizga kirib, <b>boshlash (/start)</b> tugmasini bosing!\n\n` +
+          `Sizning vaqtinchalik kirish kodingiz (Xavfsizlik uchun bu xabar 30 soniyadan so'ng o'chiriladi):\n` +
+          `➡️ <code>${code}</code>`,
+          { parse_mode: "HTML" }
         );
 
         setTimeout(async () => {
@@ -315,7 +336,7 @@ Omad tilaymiz! 🚀
   });
 
   // /sync command to bootstrap admins & get real-time statistics
-  bot.hears(/^\/sync/i, async (ctx) => {
+  bot.command("sync", async (ctx) => {
     try {
       if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
         return ctx.reply("Ushbu buyruqni faqat guruhlarda ishlatish mumkin.");
@@ -325,9 +346,24 @@ Omad tilaymiz! 🚀
       const chatTitle = (ctx.chat as any).title || "Guruh";
       const dbClient = checkDatabase();
       
+      if (!ctx.from) {
+        return ctx.reply("Foydalanuvchi ma'lumotlarini aniqlab bo'lmadi.");
+      }
+
       // Robust admin or creator check using ctx.getChatAdministrators()
-      const admins = await ctx.getChatAdministrators();
-      const isUserAdminOrCreator = admins.some(a => a.user.id === ctx.from.id);
+      let isUserAdminOrCreator = false;
+      let admins: any[] = [];
+      try {
+        admins = await ctx.getChatAdministrators();
+        isUserAdminOrCreator = admins.some(a => a.user.id === ctx.from?.id);
+      } catch (adminErr) {
+        console.error("Failed to query admins in /sync:", adminErr);
+        return ctx.reply(
+          `⚠️ <b>Xatolik:</b> Guruh administratorlari ro'yxatini olib bo'lmadi.\n\n` +
+          `Iltimos, bot guruhda administrator ekanligini tekshiring!`,
+          { parse_mode: "HTML" }
+        );
+      }
       
       if (!isUserAdminOrCreator) {
         return ctx.reply("Ushbu buyruq faqat guruh adminlari yoki egasi uchun ruxsat etilgan!");
@@ -371,11 +407,11 @@ Omad tilaymiz! 🚀
       }
 
       const replyMsg = await ctx.reply(
-        `✅ **Birlashish (Sync) yakunlandi!**\n\n` +
-        `📊 **Guruh a'zolari soni (Telegram API):** ${realMemberCount} ta\n` +
-        `👤 **Ro'yxatdan o'tgan administratorlar:** ${importedCount} ta\n\n` +
-        `_Guruh a'zolari guruhda xabar yozishi bilan ular ham avtomatik ravishda bazaga kiritib boriladi._`,
-        { parse_mode: "Markdown" }
+        `✅ <b>Birlashish (Sync) yakunlandi!</b>\n\n` +
+        `📊 <b>Guruh a'zolari soni (Telegram API):</b> ${realMemberCount} ta\n` +
+        `👤 <b>Ro'yxatdan o'tgan administratorlar:</b> ${importedCount} ta\n\n` +
+        `<i>Guruh a'zolari guruhda xabar yozishi bilan ular ham avtomatik ravishda bazaga kiritib boriladi.</i>`,
+        { parse_mode: "HTML" }
       );
       
       // Auto-delete reply after 15 seconds to keep group clean
