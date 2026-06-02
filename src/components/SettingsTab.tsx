@@ -71,52 +71,54 @@ export default function SettingsTab({ verifiedChatIds, setVerifiedChatIds, group
           </div>
         </div>
 
-        {/* Security & Access Management */}
-        <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-black/5 shadow-sm text-left font-sans space-y-6">
-          <div>
-            <h3 className="text-lg font-serif font-bold text-gray-900 flex items-center gap-2">
-              <ShieldCheck className="text-[#5A5A40]" /> Xavfsizlik va Seanslar
-            </h3>
-            <p className="text-xs text-[#5A5A40]/70 mt-1">Siz ulashtirgan faol guruhlar va kirish ruxsatnomalari ro'yxati</p>
-          </div>
+        {/* Security & Access Management & Telegram Webhook */}
+        <div className="space-y-8">
+          <div className="bg-white p-6 sm:p-8 rounded-[32px] border border-black/5 shadow-sm text-left font-sans space-y-6">
+            <div>
+              <h3 className="text-lg font-serif font-bold text-gray-900 flex items-center gap-2">
+                <ShieldCheck className="text-[#5A5A40]" /> Xavfsizlik va Seanslar
+              </h3>
+              <p className="text-xs text-[#5A5A40]/70 mt-1">Siz ulashtirgan faol guruhlar va kirish ruxsatnomalari ro'yxati</p>
+            </div>
 
-          <div className="space-y-3">
-            {verifiedChatIds.length === 0 ? (
-              <p className="text-xs text-gray-500 italic py-4">Barcha seanslar yuklanmagan yoki o'chirilgan.</p>
-            ) : (
-              verifiedChatIds.map(chatId => {
-                const matchedGroup = groups.find(g => g.id === chatId);
-                const title = matchedGroup?.title || `Guruh (ID: ${chatId})`;
-                return (
-                  <div key={chatId} className="flex items-center justify-between p-3 bg-[#F5F5F0] rounded-xl border border-black/5 text-xs">
-                    <div>
-                      <p className="font-bold text-gray-900">{title}</p>
-                      <p className="text-[10px] text-gray-500 font-mono mt-0.5">{chatId}</p>
+            <div className="space-y-3">
+              {verifiedChatIds.length === 0 ? (
+                <p className="text-xs text-gray-500 italic py-4">Barcha seanslar yuklanmagan yoki o'chirilgan.</p>
+              ) : (
+                verifiedChatIds.map(chatId => {
+                  const matchedGroup = groups.find(g => g.id === chatId);
+                  const title = matchedGroup?.title || `Guruh (ID: ${chatId})`;
+                  return (
+                    <div key={chatId} className="flex items-center justify-between p-3 bg-[#F5F5F0] rounded-xl border border-black/5 text-xs">
+                      <div>
+                        <p className="font-bold text-gray-900">{title}</p>
+                        <p className="text-[10px] text-gray-500 font-mono mt-0.5">{chatId}</p>
+                      </div>
+                      <button
+                        onClick={() => handleLogoutGroup(chatId)}
+                        className="text-red-600 hover:bg-red-50 p-2 rounded-lg cursor-pointer font-bold text-[11px]"
+                        title="Ushbu guruhdan chiqish"
+                      >
+                        O'chirish
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleLogoutGroup(chatId)}
-                      className="text-red-600 hover:bg-red-50 p-2 rounded-lg cursor-pointer font-bold text-[11px]"
-                      title="Ushbu guruhdan chiqish"
-                    >
-                      O'chirish
-                    </button>
-                  </div>
-                );
-              })
+                  );
+                })
+              )}
+            </div>
+
+            {verifiedChatIds.length > 0 && (
+              <div className="border-t border-black/5 pt-4">
+                <button
+                  onClick={handleLogoutAll}
+                  className="w-full bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <LogOut size={14} />
+                  Barcha seanslarni tozalash (Chiqish)
+                </button>
+              </div>
             )}
           </div>
-
-          {verifiedChatIds.length > 0 && (
-            <div className="border-t border-black/5 pt-4">
-              <button
-                onClick={handleLogoutAll}
-                className="w-full bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold py-3 px-4 rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                <LogOut size={14} />
-                Barcha seanslarni tozalash (Chiqish)
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

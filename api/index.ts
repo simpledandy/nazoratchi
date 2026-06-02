@@ -33,11 +33,52 @@ app.post("/api/telegram-webhook", async (req, res) => {
   }
 
   try {
-    // Process incoming updates directly
-    await bot.handleUpdate(req.body, res);
+    // Process incoming updates directly, avoiding webhook reply termination cutoff
+    await bot.handleUpdate(req.body);
+    res.status(200).json({ ok: true });
   } catch (err: any) {
     console.error("Error handling webhook update:", err);
     res.status(500).send("Error processing update");
+  }
+});
+
+// Secure endpoint to automatically register webhook with Telegram
+app.get("/api/telegram-webhook/setup", async (req, res) => {
+  if (!bot) {
+    return res.status(503).json({
+      success: false,
+      error: "Bot ishga tushirilmagan! Iltimos, TELEGRAM_BOT_TOKEN muhit o'zgaruvchisini tekshiring."
+    });
+  }
+
+  try {
+    const protocol = req.headers["x-forwarded-proto"] || "https";
+    const host = req.headers.host;
+    
+    if (!host) {
+      return res.status(400).json({ success: false, error: "Host topilmadi" });
+    }
+
+    const webhookUrl = `${protocol}://${host}/api/telegram-webhook`;
+    
+    // Register the Vercel endpoint with Telegram
+    await bot.telegram.setWebhook(webhookUrl, {
+      secret_token: process.env.TELEGRAM_WEBHOOK_SECRET
+    });
+
+    console.log(`Telegram Bot webhook registered successfully: ${webhookUrl}`);
+    
+    res.json({
+      success: true,
+      webhookUrl,
+      message: "Telegram bot vebxuki muvaffaqiyatli bog'landi!"
+    });
+  } catch (err: any) {
+    console.error("Webhook registration failed:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message || "Vebxukni ro'yxatdan o'tkazishda xatolik yuz berdi"
+    });
   }
 });
 

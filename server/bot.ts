@@ -57,8 +57,8 @@ if (bot) {
       try { await ctx.deleteMessage(); } catch (e) {}
     }
 
-    // Delete commands after reading
-    if (msg.text && msg.text.startsWith("/")) {
+    // Delete commands meant for our bot after reading
+    if (msg.text && (msg.text.startsWith("/sync") || msg.text.startsWith("/auth"))) {
       try { await ctx.deleteMessage(); } catch (e) {}
     }
 
