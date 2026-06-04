@@ -13,4 +13,4 @@ export interface LeaderboardItem {
   name: string;
 }
 
-export type TabType = "dashboard" | "leaderboard" | "contests" | "settings" | "instructions";
+export type TabType = "dashboard" | "leaderboard" | "contests" | "sales" | "settings" | "instructions";

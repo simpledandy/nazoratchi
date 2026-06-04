@@ -9,6 +9,7 @@ import ContestsTab from "./components/ContestsTab";
 import SettingsTab from "./components/SettingsTab";
 import InstructionsTab from "./components/InstructionsTab";
 import UserDetailModal from "./components/UserDetailModal";
+import SalesTab from "./components/SalesTab";
 
 interface Toast {
   id: string;
@@ -484,6 +485,14 @@ export default function App() {
             handleCreateContest={handleCreateContest}
             groups={groups}
             contests={contests}
+          />
+        )}
+
+        {activeTab === "sales" && (
+          <SalesTab 
+            selectedGroupId={selectedGroupId}
+            groups={groups}
+            showToast={showToast}
           />
         )}
 

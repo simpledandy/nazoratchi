@@ -1,5 +1,5 @@
 import React from "react";
-import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle, X, BookOpen } from "lucide-react";
+import { BarChart3, Trophy, Calendar, Settings as SettingsIcon, AlertCircle, X, BookOpen, ShoppingBag } from "lucide-react";
 import { TabType } from "../types";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -79,6 +79,12 @@ export default function Sidebar({ activeTab, setActiveTab, isOpen, onClose, conf
             onClick={() => handleTabClick("contests")}
             icon={<Calendar size={20} />}
             label="Guruh Tanlovlari"
+          />
+          <NavItem 
+            active={activeTab === "sales"} 
+            onClick={() => handleTabClick("sales")}
+            icon={<ShoppingBag size={20} />}
+            label="Savdo va To'lovlar"
           />
           <NavItem 
             active={activeTab === "instructions"} 

@@ -1,0 +1,560 @@
+[
+  {
+    "code": "1004",
+    "name": "Whitening tonic-essence for face / Odorlantiruvchi tonik-essensiya",
+    "volume": "200ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1007",
+    "name": "Whitening eye cream / Ko'z atrofini oqartiruvchi krem",
+    "volume": "25ml",
+    "price": 79000,
+    "discount_price": 67000,
+    "points": 5.5,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1008",
+    "name": "Cleansing foam vit E / Vitamin E bilan yuvinish ko'pigi",
+    "volume": "100ml",
+    "price": 69000,
+    "discount_price": 59000,
+    "points": 4.7,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1021",
+    "name": "All in one cream / Hammasi birda yuz kremi",
+    "volume": "50ml",
+    "price": 72000,
+    "discount_price": 60000,
+    "points": 5.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1023n",
+    "name": "Peeling Gel lotion / Piling gel-losoni",
+    "volume": "100ml",
+    "price": 97000,
+    "discount_price": 85000,
+    "points": 6.8,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1026",
+    "name": "Whitening lotion-essence for face / Oqartiruvchi loson-essensiya",
+    "volume": "200ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1028",
+    "name": "Wash OFF Pack / Loyli yuz niqobi (Глиняная маска)",
+    "volume": "240ml",
+    "price": 84000,
+    "discount_price": 72000,
+    "points": 6.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1030",
+    "name": "Sun cream / Quyoshdan himoyalovchi krem (SPF 50)",
+    "volume": "50ml",
+    "price": 98000,
+    "discount_price": 86000,
+    "points": 7.3,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1033",
+    "name": "Vitamin C Serum / Vitamin C li faol zardob",
+    "volume": "30ml",
+    "price": 185000,
+    "discount_price": 165000,
+    "points": 13.2,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1034",
+    "name": "Snail extract cream / Shilliqqurt ekstraktli krem (Крем с улиткой)",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1040",
+    "name": "Cream mist / Yuz uchun krem-mist",
+    "volume": "165ml",
+    "price": 60000,
+    "discount_price": 50000,
+    "points": 4.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1041n",
+    "name": "Face scrub / Yuz uchun skrab",
+    "volume": "100ml",
+    "price": 70000,
+    "discount_price": 60000,
+    "points": 4.8,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1042",
+    "name": "Synake peptide face cream / Synake ilon peptidi yuz kremi",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1043",
+    "name": "Black Caviar eye cream / Qora ikra ko'z kremi",
+    "volume": "25ml",
+    "price": 79000,
+    "discount_price": 67000,
+    "points": 5.5,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1044",
+    "name": "Face Mist Aloe Soothing / Aloe tinchlantiruvchi mist",
+    "volume": "165ml",
+    "price": 60000,
+    "discount_price": 50000,
+    "points": 4.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1045",
+    "name": "Aloe Vera Cleansing foam / Aloe Vera tozalovchi ko'pigi",
+    "volume": "100ml",
+    "price": 69000,
+    "discount_price": 59000,
+    "points": 4.7,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1047",
+    "name": "Cleansing water / Makiyajni tozalovchi suv",
+    "volume": "280ml",
+    "price": 39000,
+    "discount_price": 32000,
+    "points": 2.6,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1057",
+    "name": "Synake peptide eye cream / Synake peptidi ko'z kremi",
+    "volume": "25ml",
+    "price": 79000,
+    "discount_price": 67000,
+    "points": 5.5,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1063n",
+    "name": "Synake peptide face tonic / Synake peptidi yuz tonigi",
+    "volume": "200ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1064n",
+    "name": "Snail Moisturizing face tonic / Shilliqqurt namlantiruvchi tonik",
+    "volume": "200ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1072",
+    "name": "Whitening face cream / Yuzni yorituvchi oqartiruvchi krem",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1073",
+    "name": "Black Caviar cream / Qora ikrali yuz kremi",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1074",
+    "name": "Tea tree cream / Muammoli teri uchun Choy daraxti kremi",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1094",
+    "name": "Hyaluronic Acid Skin Tonic / Gialuron kislotali yuz tonigi",
+    "volume": "200ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1096",
+    "name": "Hyaluronic Acid face cream / Gialuron kislotali yuz kremi",
+    "volume": "50ml",
+    "price": 125000,
+    "discount_price": 108000,
+    "points": 9.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1099",
+    "name": "Hyaluronic Acid eye cream / Gialuron kislotali ko'z kremi",
+    "volume": "25ml",
+    "price": 79000,
+    "discount_price": 67000,
+    "points": 5.5,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1100",
+    "name": "Jenshen mask / Маска Жень-Шень (Ginseng Sheet Mask)",
+    "volume": "25ml",
+    "price": 17000,
+    "discount_price": 14000,
+    "points": 1.2,
+    "category": "Sheet Mask"
+  },
+  {
+    "code": "1101",
+    "name": "Retinol Anti-Aging mask / Retinol yoshartiruvchi niqob",
+    "volume": "25ml",
+    "price": 17000,
+    "discount_price": 14000,
+    "points": 1.2,
+    "category": "Sheet Mask"
+  },
+  {
+    "code": "1102",
+    "name": "MADECASSOL sheet mask / Madekassol tinchlantiruvchi niqob",
+    "volume": "25ml",
+    "price": 17000,
+    "discount_price": 14000,
+    "points": 1.2,
+    "category": "Sheet Mask"
+  },
+  {
+    "code": "1103",
+    "name": "Arbutin-Niacinamide mask / Arbutin va Niatsinamid niqobi",
+    "volume": "25ml",
+    "price": 17000,
+    "discount_price": 14000,
+    "points": 1.2,
+    "category": "Sheet Mask"
+  },
+  {
+    "code": "1104",
+    "name": "Ceramide-Hyaluron mask / Keramid va Gialuron niqobi",
+    "volume": "25ml",
+    "price": 17000,
+    "discount_price": 14000,
+    "points": 1.2,
+    "category": "Sheet Mask"
+  },
+  {
+    "code": "1110",
+    "name": "Hyaluronic Acid essence / Gialuron kislotali faol essensiya-zardob",
+    "volume": "30ml",
+    "price": 170000,
+    "discount_price": 150000,
+    "points": 12.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1156",
+    "name": "Vitamin E Serum / Vitamin E faol qarishga qarshi zardob",
+    "volume": "30ml",
+    "price": 180000,
+    "discount_price": 160000,
+    "points": 13.0,
+    "category": "Facial Care"
+  },
+  {
+    "code": "1157",
+    "name": "New sun protection serum 50+ / Quyoshdan himoyalovchi yangi zardob",
+    "volume": "50ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.4,
+    "category": "Facial Care"
+  },
+  {
+    "code": "2002n",
+    "name": "Body scrub / Tana uchun skrab (Скраб для тела)",
+    "volume": "180ml",
+    "price": 48000,
+    "discount_price": 38000,
+    "points": 3.0,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2004n",
+    "name": "Body cream with honey & shea butter / Asal va shi yog'li tana kremi",
+    "volume": "180ml",
+    "price": 48000,
+    "discount_price": 38000,
+    "points": 3.0,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2005",
+    "name": "WHG big / Gigiyenik katta intim dush geli (Гигиенический гель)",
+    "volume": "300ml",
+    "price": 72000,
+    "discount_price": 60000,
+    "points": 5.5,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2006",
+    "name": "Family balsam / Oila a'zolari uchun yumshatuvchi balzam",
+    "volume": "500ml",
+    "price": 72000,
+    "discount_price": 60000,
+    "points": 5.5,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2007",
+    "name": "Family body Gel / Oila a'zolari uchun dush geli",
+    "volume": "500ml",
+    "price": 65000,
+    "discount_price": 53000,
+    "points": 4.6,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2008",
+    "name": "Shampoo Family / Oila a'zolari uchun yumshoq shampun",
+    "volume": "500ml",
+    "price": 75000,
+    "discount_price": 62000,
+    "points": 5.2,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2034",
+    "name": "Shampoo Anti loosing / Soch to'kilishiga qarshi professional shampun",
+    "volume": "420ml",
+    "price": 79000,
+    "discount_price": 68000,
+    "points": 5.4,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "2035",
+    "name": "Shampoo Oily / Yog'li sochlar uchun maxsus dori-shampun",
+    "volume": "440ml",
+    "price": 72000,
+    "discount_price": 60000,
+    "points": 5.2,
+    "category": "Body & Hair"
+  },
+  {
+    "code": "6000",
+    "name": "Fabric softener pink / Pushti rangli kiyim yumshatuvchi (Konditsioner)",
+    "volume": "1000ml",
+    "price": 58000,
+    "discount_price": 49000,
+    "points": 3.0,
+    "category": "Clean Home"
+  },
+  {
+    "code": "6001",
+    "name": "Fabric softener blue / Moviy rangli kiyim yumshatuvchi",
+    "volume": "1000ml",
+    "price": 58000,
+    "discount_price": 49000,
+    "points": 3.0,
+    "category": "Clean Home"
+  },
+  {
+    "code": "6005",
+    "name": "Liquid Detergent / Suyuq kir yuvish kukuni (Жидкий порошок)",
+    "volume": "1000ml",
+    "price": 75000,
+    "discount_price": 65000,
+    "points": 4.0,
+    "category": "Clean Home"
+  },
+  {
+    "code": "6006",
+    "name": "Kitchen Cleaner / Oshxona uchun yog' ketkazuvchi tozalagich",
+    "volume": "600ml",
+    "price": 36000,
+    "discount_price": 26000,
+    "points": 1.6,
+    "category": "Clean Home"
+  },
+  {
+    "code": "8019",
+    "name": "Parfume Mystery Style / Parfyum Style (Hushbo'y atir)",
+    "volume": "50ml",
+    "price": 210000,
+    "discount_price": 180000,
+    "points": 15.0,
+    "category": "Perfumes"
+  },
+  {
+    "code": "8021",
+    "name": "Parfume Mystery Grasia / Parfyum Grasia ayollar atri",
+    "volume": "50ml",
+    "price": 210000,
+    "discount_price": 180000,
+    "points": 15.0,
+    "category": "Perfumes"
+  },
+  {
+    "code": "8024",
+    "name": "Men Perfume Sport / Sport Erkaklar parfyumi",
+    "volume": "50ml",
+    "price": 210000,
+    "discount_price": 180000,
+    "points": 15.0,
+    "category": "Perfumes"
+  },
+  {
+    "code": "3001",
+    "name": "Make up base pink / Pushti rangli makiyaj asosi (База под макияж)",
+    "volume": "45ml",
+    "price": 60000,
+    "discount_price": 52000,
+    "points": 4.7,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3002",
+    "name": "Make up base green / Yashil rangli makiyaj asosi",
+    "volume": "45ml",
+    "price": 60000,
+    "discount_price": 52000,
+    "points": 4.7,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3035",
+    "name": "Lacore BB cream (No19, No21, No23) / BB tonal krem",
+    "volume": "50ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.2,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3036",
+    "name": "CC cream 5in1 / CC tonal kremi 5 tasi 1 da",
+    "volume": "50ml",
+    "price": 99000,
+    "discount_price": 87000,
+    "points": 7.2,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3037",
+    "name": "Primer spf 50 new / Makiyaj praymeri",
+    "volume": "30ml",
+    "price": 92000,
+    "discount_price": 80000,
+    "points": 6.5,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3070",
+    "name": "Long Lashing mascara / Uzaytiruvchi kiprik tushi (Тушь для ресниц)",
+    "volume": "12g",
+    "price": 87000,
+    "discount_price": 76000,
+    "points": 6.2,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3076",
+    "name": "Lipstick Berry Cocktail / Berry kokteyli lab bo'yog'i",
+    "volume": "4g",
+    "price": 62000,
+    "discount_price": 52000,
+    "points": 4.2,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "3081",
+    "name": "Matte Lipstick Sweet Caramel / Shakar karamelli mot lab bo'yog'i",
+    "volume": "4g",
+    "price": 62000,
+    "discount_price": 52000,
+    "points": 4.2,
+    "category": "Decorative Makeup"
+  },
+  {
+    "code": "5000",
+    "name": "Toothpaste GOLD / Oltin kukunli tish pastasi",
+    "volume": "140g",
+    "price": 40000,
+    "discount_price": 32000,
+    "points": 2.6,
+    "category": "Oral Care"
+  },
+  {
+    "code": "5001",
+    "name": "Toothpaste Whitening / Oqartiruvchi maxsus tish pastasi",
+    "volume": "140g",
+    "price": 36000,
+    "discount_price": 28000,
+    "points": 2.2,
+    "category": "Oral Care"
+  },
+  {
+    "code": "9000n",
+    "name": "Sample cleansing foam / Yuvinish ko'pigi probniki (mini)",
+    "volume": "20ml",
+    "price": 14000,
+    "discount_price": 12500,
+    "points": 1.0,
+    "category": "Samples & Probes"
+  },
+  {
+    "code": "9001n",
+    "name": "Sample snail cream / Shilliqqurt ekstraktli yuz kremi probniki",
+    "volume": "8ml",
+    "price": 17000,
+    "discount_price": 14500,
+    "points": 1.2,
+    "category": "Samples & Probes"
+  },
+  {
+    "code": "9008n",
+    "name": "Sample Cleansing Foam Snail / Shilliqqurt ekstraktli ko'pik probniki",
+    "volume": "20ml",
+    "price": 14000,
+    "discount_price": 13500,
+    "points": 1.1,
+    "category": "Samples & Probes"
+  }
+]
