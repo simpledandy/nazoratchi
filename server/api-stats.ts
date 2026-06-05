@@ -42,6 +42,17 @@ router.get("/stats", async (req, res) => {
       return res.status(403).json({ error: "Ushbu guruh ma'lumotlarini ko'rishga ruxsatingiz yo'q!" });
     }
 
+    // Passive leaves calculation: Trigger background retroactive leaves sync
+    if (chatId && bot) {
+      import("./bot.js").then(({ checkAndRecordLeavesForGroup }) => {
+        checkAndRecordLeavesForGroup(bot!.telegram, chatId as string).catch(err => {
+          console.error("Background leaves check failed:", err);
+        });
+      }).catch(err => {
+        console.error("Failed to dynamically import bot for background leaves scan:", err);
+      });
+    }
+
     const dbClient = checkDatabase();
     
     let invitesCountQuery = dbClient.from("invites").select("*", { count: "exact", head: true });

@@ -8,6 +8,71 @@ if (!BOT_TOKEN) {
 
 export const bot = BOT_TOKEN ? new Telegraf(BOT_TOKEN) : null;
 
+export async function checkAndRecordLeavesForGroup(telegram: any, chatId: string): Promise<number> {
+  let detectedLeavesCount = 0;
+  try {
+    const dbClient = checkDatabase();
+    // Retrieve all database-registered memberships for this chat
+    const { data: dbMembers, error } = await dbClient
+      .from("memberships")
+      .select("telegram_id")
+      .eq("chat_id", chatId);
+
+    if (error || !dbMembers || dbMembers.length === 0) {
+      return 0;
+    }
+
+    console.log(`[Scanning Leaves] Verifying ${dbMembers.length} memberships against live Telegram API for chat ${chatId}`);
+
+    for (const member of dbMembers) {
+      const userId = member.telegram_id;
+      let hasLeft = false;
+
+      try {
+        const chatMember = await telegram.getChatMember(chatId, parseInt(userId));
+        if (chatMember.status === "left" || chatMember.status === "kicked") {
+          hasLeft = true;
+        }
+      } catch (err: any) {
+        // If Telegram API returns user/member not found, they have indeed left the group
+        const msg = err.message || "";
+        if (msg.includes("user not found") || msg.includes("member not found") || msg.includes("participant not found") || msg.includes("chat not found")) {
+          hasLeft = true;
+        }
+      }
+
+      if (hasLeft) {
+        // 1. Remove group membership in DB
+        await dbClient.from("memberships").delete().eq("id", `${chatId}_${userId}`);
+
+        // 2. Check if a leave log exists for this user in this group to prevent duplicate counting
+        const { data: recLeaves } = await dbClient
+          .from("leaves")
+          .select("id")
+          .eq("telegram_id", userId)
+          .eq("chat_id", chatId)
+          .limit(1);
+
+        if (!recLeaves || recLeaves.length === 0) {
+          await dbClient.from("leaves").insert({
+            telegram_id: userId,
+            chat_id: chatId,
+            timestamp: new Date().toISOString()
+          });
+          detectedLeavesCount++;
+          console.log(`[Scanning Leaves] User ${userId} successfully recorded as LEFT for chat ${chatId}`);
+        }
+      }
+
+      // Small rate limit protection delay
+      await new Promise(resolve => setTimeout(resolve, 30));
+    }
+  } catch (err) {
+    console.error("Error in checkAndRecordLeavesForGroup:", err);
+  }
+  return detectedLeavesCount;
+}
+
 if (bot) {
   // Middleware to register groups and delete system messages/commands
   bot.on("message", async (ctx, next) => {
@@ -210,6 +275,51 @@ if (bot) {
     }
   });
 
+  // Track leaves via modern chat_member status updates (robust for supergroups)
+  bot.on("chat_member", async (ctx) => {
+    try {
+      const update = ctx.update.chat_member;
+      if (!update) return;
+
+      const chatId = update.chat.id.toString();
+      const user = update.new_chat_member.user;
+      const userId = user.id.toString();
+      
+      const oldStatus = update.old_chat_member.status;
+      const newStatus = update.new_chat_member.status;
+
+      // Leaving transitions: from dynamic active membership states to left/kicked
+      const wasMember = ["creator", "administrator", "member", "restricted"].includes(oldStatus);
+      const isNowLeft = ["left", "kicked"].includes(newStatus);
+
+      if (wasMember && isNowLeft) {
+        const dbClient = checkDatabase();
+        // Remove membership
+        await dbClient.from("memberships").delete().eq("id", `${chatId}_${userId}`);
+
+        // Avoid double entry within a short timeframe
+        const fifteenSecsAgo = new Date(Date.now() - 15000).toISOString();
+        const { data: recLeaves } = await dbClient
+          .from("leaves")
+          .select("id")
+          .eq("telegram_id", userId)
+          .eq("chat_id", chatId)
+          .gte("timestamp", fifteenSecsAgo);
+
+        if (!recLeaves || recLeaves.length === 0) {
+          await dbClient.from("leaves").insert({
+            telegram_id: userId,
+            chat_id: chatId,
+            timestamp: new Date().toISOString()
+          });
+          console.log(`[Real-time ChatMember] Logged leave for user ${user.first_name} (${userId}) in group ${chatId}`);
+        }
+      }
+    } catch (err) {
+      console.error("Error on chat_member update handle:", err);
+    }
+  });
+
   // #contest command
   bot.hears(/#contest/i, async (ctx) => {
     const chatId = ctx.chat?.id?.toString();
@@ -406,10 +516,14 @@ if (bot) {
         importedCount++;
       }
 
+      // Run retroactive leave scan for group members
+      const detectedLeavesCount = await checkAndRecordLeavesForGroup(ctx.telegram, chatId);
+
       const replyMsg = await ctx.reply(
         `✅ <b>Birlashish (Sync) yakunlandi!</b>\n\n` +
         `📊 <b>Guruh a'zolari soni (Telegram API):</b> ${realMemberCount} ta\n` +
-        `👤 <b>Ro'yxatdan o'tgan administratorlar:</b> ${importedCount} ta\n\n` +
+        `👤 <b>Ro'yxatdan o'tgan administratorlar:</b> ${importedCount} ta\n` +
+        `🏃‍♂️ <b>Yangi guruhni tark etganlar (Logga olingan):</b> ${detectedLeavesCount} ta\n\n` +
         `<i>Guruh a'zolari guruhda xabar yozishi bilan ular ham avtomatik ravishda bazaga kiritib boriladi.</i>`,
         { parse_mode: "HTML" }
       );
@@ -432,7 +546,9 @@ if (bot) {
   // Only launch polling if NOT running on Vercel
   const isVercel = process.env.VERCEL === "1" || process.env.NOW_DEPLOYMENT !== undefined;
   if (!isVercel) {
-    bot.launch()
+    bot.launch({
+      allowedUpdates: ["message", "chat_member", "my_chat_member", "callback_query"]
+    })
       .then(() => {
         console.log("Telegram bot started in POLLING mode (local development)");
       })

@@ -63,7 +63,8 @@ app.get("/api/telegram-webhook/setup", async (req, res) => {
     
     // Register the Vercel endpoint with Telegram
     await bot.telegram.setWebhook(webhookUrl, {
-      secret_token: process.env.TELEGRAM_WEBHOOK_SECRET
+      secret_token: process.env.TELEGRAM_WEBHOOK_SECRET,
+      allowed_updates: ["message", "chat_member", "my_chat_member", "callback_query"]
     });
 
     console.log(`Telegram Bot webhook registered successfully: ${webhookUrl}`);
