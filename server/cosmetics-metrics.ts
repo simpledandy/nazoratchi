@@ -33,7 +33,12 @@ export async function getBusinessMetrics(chatId?: string) {
       const { data: parts } = await dbClient.from("sales_order_items").select("*").in("order_id", oIds);
       itemsList = parts || [];
 
-      const { data: pays } = await dbClient.from("sales_payments").select("*").in("order_id", oIds);
+      const { data: pays } = chatId 
+        ? await dbClient.from("sales_payments").select("*").in("order_id", oIds)
+        : await dbClient.from("sales_payments").select("*");
+      paymentsList = pays || [];
+    } else if (!chatId) {
+      const { data: pays } = await dbClient.from("sales_payments").select("*");
       paymentsList = pays || [];
     }
   } else {
@@ -41,7 +46,9 @@ export async function getBusinessMetrics(chatId?: string) {
     ordersList = chatId ? getDemoOrders().filter(o => o.chat_id === chatId) : getDemoOrders();
     const oIds = ordersList.map(o => o.id);
     itemsList = getDemoOrderItems().filter(i => oIds.includes(i.order_id));
-    paymentsList = getDemoPayments().filter(p => p.order_id && oIds.includes(p.order_id));
+    paymentsList = chatId 
+      ? getDemoPayments().filter(p => p.order_id && oIds.includes(p.order_id)) 
+      : getDemoPayments();
   }
 
   const totalSalesRevenue = ordersList.reduce((acc, o) => acc + Number(o.total_amount), 0);

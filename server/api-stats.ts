@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { checkDatabase } from "./db.js";
-import { bot } from "./bot.js";
+import { bot, checkAndRecordLeavesForGroup } from "./bot.js";
 import { getVerifiedChats } from "./utils.js";
 
 const router = Router();
@@ -43,13 +43,9 @@ router.get("/stats", async (req, res) => {
     }
 
     // Passive leaves calculation: Trigger background retroactive leaves sync
-    if (chatId && bot) {
-      import("./bot.js").then(({ checkAndRecordLeavesForGroup }) => {
-        checkAndRecordLeavesForGroup(bot!.telegram, chatId as string).catch(err => {
-          console.error("Background leaves check failed:", err);
-        });
-      }).catch(err => {
-        console.error("Failed to dynamically import bot for background leaves scan:", err);
+    if (chatId && bot && typeof checkAndRecordLeavesForGroup === "function") {
+      checkAndRecordLeavesForGroup(bot.telegram, chatId as string).catch(err => {
+        console.error("Background leaves check failed:", err);
       });
     }
 
