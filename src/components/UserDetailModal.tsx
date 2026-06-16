@@ -53,18 +53,62 @@ export default function UserDetailModal({
             <>
               {/* User Stats Summary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 flex flex-col justify-[#222]">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]/60">Guruhdagi holati</span>
+                  <div className="mt-1 flex items-center gap-2">
+                    {userDetailData?.user?.status === "left" ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-100 text-rose-800">
+                        Tark etgan (Chiqib ketgan)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800">
+                        Faol guruh a'zosi
+                      </span>
+                    )}
+                    {userDetailData?.user?.joinCount > 1 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800">
+                        🔄 {userDetailData.user.joinCount}-bor qaytgan
+                      </span>
+                    )}
+                  </div>
+                  {userDetailData?.user?.leftAt && (
+                    <span className="text-[10px] text-gray-500 mt-1">
+                      Chiqib ketgan sana: {format(new Date(userDetailData.user.leftAt), "d-MMMM, yyyy HH:mm", { locale: uz })}
+                    </span>
+                  )}
+                </div>
+
                 <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 flex flex-col justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#5A5A40]/60">Guruhga qo'shilgan sana</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]/60">Qo'shilish Manbasi / Kim taklif qilgan</span>
+                  <span className="text-sm font-medium mt-1">
+                    {userDetailData?.user?.inviteLink ? (
+                      <div className="flex flex-col">
+                        <span className="text-blue-600 font-bold truncate max-w-xs">🔗 {userDetailData.user.inviteLinkName || "Taklif havolasi"}</span>
+                        {userDetailData?.user?.inviterName && (
+                          <span className="text-[10px] text-gray-500">Havola yaratuvchisi: {userDetailData.user.inviterName}</span>
+                        )}
+                      </div>
+                    ) : userDetailData?.user?.inviterName ? (
+                      <span className="text-emerald-700 font-bold">🧑‍🤝‍🧑 {userDetailData.user.inviterName} {userDetailData.user.inviterUsername ? `(@${userDetailData.user.inviterUsername})` : ""}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">O'zi to'g'ridan-to'g'ri qo'shilgan</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 flex flex-col justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]/60">Guruhga ilk qo'shilgan sana</span>
                   <span className="text-sm font-medium mt-1">
                     {userDetailData?.user?.joinedAt 
                       ? format(new Date(userDetailData.user.joinedAt), "d-MMMM, yyyy HH:mm", { locale: uz })
-                      : "Guruh tashkil etilgandan oldin qo'shilgan"}
+                      : "Tizim tashkil etilgandan oldin qo'shilgan"}
                   </span>
                 </div>
+
                 <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 flex flex-col justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#5A5A40]/60">Taklif etilganlar soni</span>
-                  <span className="text-2xl font-bold text-emerald-700 mt-1">
-                    {userDetailData?.invitations?.length || 0} ta a'zo
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#5A5A40]/60">Guruhga jalb etgan yangi a'zolari</span>
+                  <span className="text-xl font-bold text-emerald-700 mt-1">
+                    {userDetailData?.invitations?.length || 0} ta a'zo taklif qilgan
                   </span>
                 </div>
               </div>

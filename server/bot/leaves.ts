@@ -1,4 +1,4 @@
-import { checkDatabase } from "../db.js";
+import { checkDatabase, ensureUserInDb } from "../db.js";
 
 export async function checkAndRecordLeavesForGroup(telegram: any, chatId: string): Promise<number> {
   let detectedLeavesCount = 0;
@@ -13,17 +13,18 @@ export async function checkAndRecordLeavesForGroup(telegram: any, chatId: string
       return 0;
     }
 
-    // Retrieve all database-registered memberships for this chat
+    // Retrieve only database-registered memberships for this chat that haven't left yet
     const { data: dbMembers, error } = await dbClient
       .from("memberships")
-      .select("telegram_id")
-      .eq("chat_id", chatId);
+      .select("telegram_id, username, first_name, last_name")
+      .eq("chat_id", chatId)
+      .not("status", "eq", "left");
 
     if (error || !dbMembers || dbMembers.length === 0) {
       return 0;
     }
 
-    console.log(`[Scanning Leaves] Verifying ${dbMembers.length} memberships against live Telegram API for chat ${chatId}`);
+    console.log(`[Scanning Leaves] Verifying ${dbMembers.length} active memberships against live Telegram API for chat ${chatId}`);
 
     for (const member of dbMembers) {
       const userId = member.telegram_id;
@@ -47,8 +48,18 @@ export async function checkAndRecordLeavesForGroup(telegram: any, chatId: string
       }
 
       if (hasLeft) {
-        // 1. Remove group membership in DB
-        await dbClient.from("memberships").delete().eq("id", `${chatId}_${userId}`);
+        // Ensure user exists in users table first
+        await ensureUserInDb(userId, {
+          username: member.username || "",
+          firstName: member.first_name || "Guruh a'zosi",
+          lastName: member.last_name || ""
+        });
+
+        // 1. Mark group membership in DB as left
+        await dbClient.from("memberships").update({
+          status: "left",
+          left_at: new Date().toISOString()
+        }).eq("id", `${chatId}_${userId}`);
 
         // 2. Check if a leave log exists for this user in this group to prevent duplicate counting
         const fifteenSecsAgo = new Date(Date.now() - 15000).toISOString();

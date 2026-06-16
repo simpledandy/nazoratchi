@@ -140,7 +140,8 @@ export default function DashboardTab({ stats, links = [], fetchUserDetails }: Da
                   <tr className="border-b border-black/5 text-[#5A5A40]/60 uppercase tracking-wider">
                     <th className="py-2.5 px-4 font-bold">Foydalanuvchi</th>
                     <th className="py-2.5 px-4 font-bold">Telegram Username</th>
-                    <th className="py-2.5 px-4 font-bold">Telegram ID</th>
+                    <th className="py-2.5 px-4 font-bold">Holat</th>
+                    <th className="py-2.5 px-4 font-bold">Qo'shilish Manbasi</th>
                     <th className="py-2.5 px-4 font-bold">Sinxronlashgan sana</th>
                     <th className="py-2.5 px-4 font-bold text-right font-sans">Amallar</th>
                   </tr>
@@ -156,19 +157,58 @@ export default function DashboardTab({ stats, links = [], fetchUserDetails }: Da
                       <tr 
                         key={m.telegramId}
                         onClick={() => fetchUserDetails(m.telegramId)}
-                        className="hover:bg-[#F5F5F0]/50 cursor-pointer transition-colors"
+                        className={`hover:bg-[#F5F5F0]/50 cursor-pointer transition-colors ${m.status === "left" ? "opacity-60 bg-rose-50/20" : ""}`}
                         title="Tafsilotlarni ko'rish uchun bosing"
                       >
                         <td className="py-3 px-4 font-bold text-[#1a1a1a]">
-                          <span className="underline decoration-dotted decoration-[#5A5A40]/30 hover:text-[#5A5A40]">
-                            {m.firstName} {m.lastName}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="underline decoration-dotted decoration-[#5A5A40]/30 hover:text-[#5A5A40]">
+                              {m.firstName} {m.lastName}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">ID: {m.telegramId}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-[#5A5A40]">
                           {m.username ? `@${m.username}` : <span className="text-black/20 italic">username yo'q</span>}
                         </td>
-                        <td className="py-3 px-4 font-mono text-[11px] opacity-75">{m.telegramId}</td>
-                        <td className="py-3 px-4 text-xs text-[#5A5A40]/70">
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col gap-1 items-start">
+                            {m.status === "left" ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                                Tark etgan
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                Guruhda
+                              </span>
+                            )}
+                            {m.joinCount > 1 && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-800" title="Ushbu foydalanuvchi guruhga bir necha marta qayta qo'shilgan">
+                                🔄 {m.joinCount}-marta qaytgan
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-xs text-[#5A5A40]">
+                          {m.inviteLink ? (
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-blue-600 truncate max-w-[150px]" title={m.inviteLink}>
+                                🔗 {m.inviteLinkName || "Taklif havolasi"}
+                              </span>
+                              {m.inviterName && (
+                                <span className="text-[9px] text-[#5A5A40]/75">Yaratuvchi: {m.inviterName}</span>
+                              )}
+                            </div>
+                          ) : m.inviterName ? (
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-emerald-700">🧑‍🤝‍🧑 {m.inviterName}</span>
+                              <span className="text-[9px] text-gray-400">tomonidan qo'shilgan</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">O'zi qo'shilgan</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-[#5A5A40]/70 font-mono">
                           {m.joinedAt ? new Date(m.joinedAt).toLocaleString("uz-UZ") : "Noma'lum"}
                         </td>
                         <td className="py-3 px-4 text-right">

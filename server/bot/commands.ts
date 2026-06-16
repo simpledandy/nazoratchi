@@ -192,7 +192,9 @@ export function registerBotCommands(bot: any) {
           username: u.username || "",
           first_name: u.first_name,
           last_name: u.last_name || "",
-          joined_at: new Date().toISOString()
+          joined_at: new Date().toISOString(),
+          status: "active",
+          left_at: null
         });
 
         importedCount++;

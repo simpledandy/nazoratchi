@@ -77,21 +77,24 @@ router.get("/stats", async (req, res) => {
           const { count } = await dbClient
             .from("memberships")
             .select("*", { count: "exact", head: true })
-            .eq("chat_id", chatId);
+            .eq("chat_id", chatId)
+            .not("status", "eq", "left");
           totalMembersCount = count || 0;
         }
       } else {
         const { count } = await dbClient
           .from("memberships")
           .select("*", { count: "exact", head: true })
-          .eq("chat_id", chatId);
+          .eq("chat_id", chatId)
+          .not("status", "eq", "left");
         totalMembersCount = count || 0;
       }
     } else {
       const { count } = await dbClient
         .from("memberships")
         .select("*", { count: "exact", head: true })
-        .in("chat_id", verifiedChatIds);
+        .in("chat_id", verifiedChatIds)
+        .not("status", "eq", "left");
       totalMembersCount = count || 0;
     }
 
@@ -126,6 +129,7 @@ router.get("/stats", async (req, res) => {
     if (membersListRes.data) {
       membersListRes.data.forEach((m: any) => {
         if (m.telegram_id) uniqueUserIds.add(m.telegram_id);
+        if (m.invited_by) uniqueUserIds.add(m.invited_by);
       });
     }
     if (invitesListRes.data) {
@@ -190,12 +194,21 @@ router.get("/stats", async (req, res) => {
 
     const resMembers = (membersListRes.data || []).map((m: any) => {
       const u = userMap[m.telegram_id];
+      const inviter = m.invited_by ? userMap[m.invited_by] : null;
       return {
         telegramId: m.telegram_id,
         username: m.username || u?.username || "",
         firstName: m.first_name || u?.first_name || "A'zo",
         lastName: m.last_name || u?.last_name || "",
-        joinedAt: m.joined_at || u?.joined_at || ""
+        joinedAt: m.joined_at || u?.joined_at || "",
+        status: m.status || "active",
+        leftAt: m.left_at,
+        invitedBy: m.invited_by,
+        inviterName: inviter ? `${inviter.first_name} ${inviter.last_name || ""}`.trim() : null,
+        inviterUsername: inviter?.username || null,
+        inviteLink: m.invite_link,
+        inviteLinkName: m.invite_link_name,
+        joinCount: m.join_count || 1
       };
     });
 
@@ -293,6 +306,38 @@ router.get("/users/:id/details", async (req, res) => {
       .select("*")
       .eq("telegram_id", userId)
       .single();
+
+    // Fetch the user's specific group membership details
+    let membershipData = null;
+    if (chatId) {
+      const { data: mem } = await dbClient
+        .from("memberships")
+        .select("*")
+        .eq("telegram_id", userId)
+        .eq("chat_id", chatId)
+        .maybeSingle();
+      membershipData = mem;
+    } else {
+      const { data: mems } = await dbClient
+        .from("memberships")
+        .select("*")
+        .eq("telegram_id", userId)
+        .limit(1);
+      if (mems && mems.length > 0) {
+        membershipData = mems[0];
+      }
+    }
+
+    // Fetch details of the inviter/referrer if available
+    let inviterUser = null;
+    if (membershipData && membershipData.invited_by) {
+      const { data: inv } = await dbClient
+        .from("users")
+        .select("*")
+        .eq("telegram_id", membershipData.invited_by)
+        .maybeSingle();
+      inviterUser = inv;
+    }
     
     let invitesQuery = dbClient.from("invites").select("*").eq("inviter_id", userId);
     if (chatId) {
@@ -331,14 +376,30 @@ router.get("/users/:id/details", async (req, res) => {
         username: userData.username,
         firstName: userData.first_name,
         lastName: userData.last_name,
-        joinedAt: userData.joined_at,
-        isBot: userData.is_bot
+        joinedAt: membershipData ? membershipData.joined_at : userData.joined_at,
+        isBot: userData.is_bot,
+        status: membershipData ? (membershipData.status || "active") : "active",
+        leftAt: membershipData ? membershipData.left_at : null,
+        joinCount: membershipData ? (membershipData.join_count || 1) : 1,
+        invitedBy: membershipData ? membershipData.invited_by : null,
+        inviterName: inviterUser ? `${inviterUser.first_name} ${inviterUser.last_name || ""}`.trim() : null,
+        inviterUsername: inviterUser ? inviterUser.username : null,
+        inviteLink: membershipData ? membershipData.invite_link : null,
+        inviteLinkName: membershipData ? membershipData.invite_link_name : null
       } : {
         telegramId: userId,
         firstName: "Noma'lum",
         lastName: "foydalanuvchi",
         joinedAt: null,
-        isBot: false
+        isBot: false,
+        status: "active",
+        leftAt: null,
+        joinCount: 1,
+        invitedBy: null,
+        inviterName: null,
+        inviterUsername: null,
+        inviteLink: null,
+        inviteLinkName: null
       },
       invitations: detailedInvites
     });

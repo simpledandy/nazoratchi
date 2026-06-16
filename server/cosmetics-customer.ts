@@ -1,4 +1,4 @@
-import { checkDatabase } from "./db.js";
+import { checkDatabase, ensureUserInDb } from "./db.js";
 import { isSupabaseConfigured, getDemoCustomers, addDemoCustomer } from "./cosmetics-store.js";
 
 // ==========================================
@@ -36,6 +36,18 @@ export async function createCustomer(body: {
 
   if (isSupabaseConfigured()) {
     const dbClient = checkDatabase();
+
+    if (telegramId) {
+      const namesList = (name || "").trim().split(/\s+/);
+      const firstName = namesList[0] || "Mijoz";
+      const lastName = namesList.slice(1).join(" ") || "";
+      await ensureUserInDb(telegramId, {
+        username: telegramUsername || "",
+        firstName: firstName,
+        lastName: lastName
+      });
+    }
+
     const { data, error } = await dbClient
       .from("sales_customers")
       .insert({
