@@ -8,7 +8,23 @@ The project operates as a dual-engine platform:
 
 ---
 
-## 🌟 Value Proposition
+## 📸 Screenshots & Previews
+
+### Admin CRM Dashboard
+![Dashboard Preview](./screenshots/dashboard_preview.png)
+*Modern web dashboard showing real-time statistics, active contest status, user details, and active members overview.*
+
+### Link Auditing & Anti-Spam Moderation
+![Link Audit Preview](./screenshots/link_audit_preview.png)
+*Detailed audit logs showing real-time message moderation and unauthorized link removal statistics.*
+
+### Cosmetics Sales Intake & Debts Tracker
+![Sales CRM Preview](./screenshots/sales_preview.png)
+*Full CRM ledger showing cosmetics order list, points (Балл) calculations, payment tracking, and outstanding debtor balances.*
+
+---
+
+## 🛠 Core Features
 
 ### 1. Growth & Engagement (Contest Engine)
 * **Real-Time Referral Verification:** Tracks who added whom (`invites` and `memberships`). It logs when invited members leave, allowing organizers to count only authentic, retained participants.
@@ -160,27 +176,3 @@ TELEGRAM_WEBHOOK_SECRET="YOUR_TELEGRAM_WEBHOOK_SECRET"
    ```bash
    npm run start
    ```
-
----
-
-## 📸 Screenshots & Previews
-
-> **Note on Adding Screenshots:** Because this application runs in an automated sandbox environment, **you must capture the screenshots yourself** based on your specific deployment! 
-> 
-> To add your custom visual previews:
-> 1. Launch the application preview in your browser (using the Development or Shared URLs).
-> 2. Capture high-quality screenshots of the **Dashboard**, **Leaderboard**, **Sales CRM**, and **Settings** panels.
-> 3. Save these image files (e.g., as `.png` or `.jpg`) inside a `/screenshots/` directory in this workspace.
-> 4. Update the image links below in this README to display them!
-
-### Admin CRM Dashboard
-*Placeholder for Dashboard view*
-`![Dashboard Preview](./screenshots/dashboard_preview.png)`
-
-### Telegram Contest Leaderboard
-*Placeholder for Leaderboard view*
-`![Leaderboard Preview](./screenshots/link_audit_preview.png)`
-
-### Cosmetics Sales Intake & Debts Tracker
-*Placeholder for Sales View*
-`![Sales CRM Preview](./screenshots/sales_preview.png)`
