@@ -1,6 +1,14 @@
 import { checkDatabase, ensureUserInDb } from "../db.js";
 
 export function registerBotMiddleware(bot: any) {
+  // Global logger for callback queries and incoming updates
+  bot.use(async (ctx: any, next: any) => {
+    if (ctx.callbackQuery) {
+      console.log(`[Bot Ingress] callback_query from user ${ctx.from?.id} (${ctx.from?.first_name}): data="${ctx.callbackQuery.data}"`);
+    }
+    return next();
+  });
+
   // Middleware to register groups and delete system messages/commands
   bot.on("message", async (ctx: any, next: any) => {
     const msg = ctx.message as any;

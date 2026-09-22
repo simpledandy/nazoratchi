@@ -33,8 +33,15 @@ app.post("/api/telegram-webhook", async (req, res) => {
   }
 
   try {
+    const update = req.body;
+    if (update?.callback_query) {
+      console.log(`[Vercel Webhook] callback_query: id=${update.callback_query.id}, data="${update.callback_query.data}", from=${update.callback_query.from?.id}`);
+    } else if (update?.message) {
+      console.log(`[Vercel Webhook] message: text="${update.message.text}", from=${update.message.from?.id}`);
+    }
+
     // Process incoming updates directly, avoiding webhook reply termination cutoff
-    await bot.handleUpdate(req.body);
+    await bot.handleUpdate(update);
     res.status(200).json({ ok: true });
   } catch (err: any) {
     console.error("Error handling webhook update:", err);

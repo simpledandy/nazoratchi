@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Bot, 
   ShieldCheck, 
@@ -10,7 +10,12 @@ import {
   Check,
   ExternalLink,
   Info,
-  Key
+  Key,
+  Activity,
+  Radio,
+  Zap,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 
 interface InstructionSection {
@@ -23,6 +28,75 @@ interface InstructionSection {
 export default function InstructionsTab() {
   const [activeSection, setActiveSection] = useState<string>("get-started");
   const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  // Bot diagnostics state
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagData, setDiagData] = useState<any>(null);
+  const [diagError, setDiagError] = useState<string | null>(null);
+  const [customWebhookUrl, setCustomWebhookUrl] = useState("");
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const fetchDiagnostics = async () => {
+    setDiagLoading(true);
+    setDiagError(null);
+    setActionMessage(null);
+    try {
+      const res = await fetch("/api/bot-diagnostics");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Diagnostika xatoligi");
+      setDiagData(data);
+    } catch (e: any) {
+      setDiagError(e.message || "Ulanishda xatolik");
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === "diagnostics") {
+      fetchDiagnostics();
+    }
+  }, [activeSection]);
+
+  const handleSetWebhook = async (useCurrentOrigin = true) => {
+    setDiagLoading(true);
+    setActionMessage(null);
+    try {
+      const targetUrl = useCurrentOrigin 
+        ? `${window.location.origin}/api/telegram-webhook` 
+        : customWebhookUrl.trim();
+
+      const res = await fetch("/api/bot-set-webhook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ webhookUrl: targetUrl })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Xatolik yuz berdi");
+      setActionMessage(`✅ ${data.message} (${data.webhookUrl})`);
+      await fetchDiagnostics();
+    } catch (e: any) {
+      setDiagError(e.message || "Vebxukni o'rnatishda xatolik");
+    } finally {
+      setDiagLoading(false);
+    }
+  };
+
+  const handleDeleteWebhook = async () => {
+    setDiagLoading(true);
+    setActionMessage(null);
+    try {
+      const res = await fetch("/api/bot-delete-webhook", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || "Xatolik");
+      setActionMessage(`ℹ️ ${data.message}`);
+      await fetchDiagnostics();
+    } catch (e: any) {
+      setDiagError(e.message || "Vebxukni o'chirishda xatolik");
+    } finally {
+      setDiagLoading(false);
+    }
+  };
 
   const sections: InstructionSection[] = [
     {
@@ -60,6 +134,12 @@ export default function InstructionsTab() {
       title: "6. Nosozliklarni tuzatish",
       icon: <AlertTriangle size={18} />,
       subtitle: "Muammolarni tahlil qilish va hal etish"
+    },
+    {
+      id: "diagnostics",
+      title: "7. Bot & Vebxuk Diagnostikasi",
+      icon: <Activity size={18} />,
+      subtitle: "Tugmalar holati, Vercel vebxuki va Telegram aloqasi"
     }
   ];
 
@@ -564,8 +644,201 @@ export default function InstructionsTab() {
                       <strong>Yechim:</strong> Guruhda bitta xabar yozing yoki biron buyruq yuboring. Shundan so'ng veb-saytni shunchaki yangilasangiz, guruhingiz ruyxatga kiradi.
                     </p>
                   </div>
+
+                  <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5 space-y-1">
+                    <h5 className="font-bold text-[#1a1a1a] flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-violet-600"></span>
+                      5. Telegram inline tugmalari (Reyting davri, Yangilash) bosilganda javob bermayapti
+                    </h5>
+                    <p className="text-[#5A5A40]/80">
+                      <strong>Sababi:</strong> Agar bot Vercel'da ishlayotgan bo'lsa, Telegram Vebxuki o'rnatilmagan yoki Vebxuk ro'yxatida <code>callback_query</code> (tugma bosilishlari) ruxsat etilmagan bo'lishi mumkin. Shuningdek, bot guruhda admin bo'lmasa, Telegram <code>chat not found</code> berishi mumkin.
+                      <br />
+                      <strong>Yechim:</strong> Chap menyudagi <strong>"7. Bot & Vebxuk Diagnostikasi"</strong> bo'limiga kiring. U yerdan botning joriy holatini tekshirib, <strong>"Vebxukni Vercel'ga ulash (Fix Webhook)"</strong> tugmasini bosing. Bu Telegram'ga tugma hodisalarini Vercel'ga uzatishni avtomatik yoqadi!
+                    </p>
+                  </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === "diagnostics" && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between border-b border-black/5 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-violet-50 text-violet-700 rounded-xl flex items-center justify-center">
+                    <Activity size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">Bot va Vebxuk Diagnostikasi</h3>
+                    <p className="text-xs text-[#5A5A40]/60">Telegram inline tugmalari, Vebxuk va Polling holati monitoringi</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={fetchDiagnostics}
+                  disabled={diagLoading}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 bg-black text-white rounded-xl hover:bg-neutral-800 disabled:opacity-50 transition cursor-pointer"
+                >
+                  <RefreshCw size={14} className={diagLoading ? "animate-spin" : ""} />
+                  <span>Yangilash</span>
+                </button>
+              </div>
+
+              {actionMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
+                  <CheckCircle2 size={16} />
+                  <span>{actionMessage}</span>
+                </div>
+              )}
+
+              {diagError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center gap-2">
+                  <XCircle size={16} />
+                  <span>{diagError}</span>
+                </div>
+              )}
+
+              {diagData && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                      <div className="text-[11px] text-[#5A5A40]/70 uppercase tracking-wider font-semibold">Telegram Bot</div>
+                      <div className="text-base font-bold text-[#1a1a1a] mt-1 flex items-center gap-1.5">
+                        <Bot size={18} className="text-violet-600" />
+                        <span>@{diagData.bot?.username || "—"}</span>
+                      </div>
+                      <div className="text-xs text-[#5A5A40] mt-0.5">{diagData.bot?.first_name} (ID: {diagData.bot?.id})</div>
+                    </div>
+
+                    <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                      <div className="text-[11px] text-[#5A5A40]/70 uppercase tracking-wider font-semibold">Aloqa Rejimi</div>
+                      <div className="text-base font-bold text-[#1a1a1a] mt-1 flex items-center gap-1.5">
+                        <Radio size={18} className={diagData.mode === "WEBHOOK" ? "text-emerald-600" : "text-amber-600"} />
+                        <span>{diagData.mode === "WEBHOOK" ? "Vebxuk (Webhook)" : "Polling (Lokal)"}</span>
+                      </div>
+                      <div className="text-xs text-[#5A5A40] mt-0.5">
+                        {diagData.mode === "WEBHOOK" ? "Vercel / Cloud serverless uchun mos" : "Lokal / dev rejim uchun"}
+                      </div>
+                    </div>
+
+                    <div className="bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                      <div className="text-[11px] text-[#5A5A40]/70 uppercase tracking-wider font-semibold">Inline Tugmalar (callback_query)</div>
+                      <div className="text-base font-bold mt-1 flex items-center gap-1.5">
+                        {diagData.webhook?.hasCallbackQuery ? (
+                          <>
+                            <CheckCircle2 size={18} className="text-emerald-600" />
+                            <span className="text-emerald-700">Yoqilgan (Faol)</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle size={18} className="text-rose-600" />
+                            <span className="text-rose-700">O'chirilgan!</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-xs text-[#5A5A40] mt-0.5">
+                        {diagData.webhook?.hasCallbackQuery ? "Tugma bosilishlari qabul qilinmoqda" : "Telegram tugma yangilanishlarini jo'natmayapti"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#F5F5F0] p-5 rounded-2xl border border-black/5 space-y-3">
+                    <h4 className="text-sm font-bold text-[#1a1a1a] flex items-center gap-2">
+                      <Zap size={16} className="text-amber-600" />
+                      Telegram Webhook tafsilotlari
+                    </h4>
+
+                    <div className="text-xs space-y-1.5 text-[#4a4a4a]">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-black/5 pb-1.5">
+                        <span className="text-[#5A5A40]">Joriy Vebxuk URL manzili:</span>
+                        <span className="font-mono bg-white px-2 py-0.5 rounded border border-black/5 break-all">
+                          {diagData.webhook?.url || "O'rnatilmagan (Bo'sh — Polling rejimida)"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between border-b border-black/5 pb-1.5">
+                        <span className="text-[#5A5A40]">Kutayotgan yangilanishlar (Pending updates):</span>
+                        <span className="font-semibold">{diagData.webhook?.pending_update_count || 0} ta</span>
+                      </div>
+
+                      {diagData.webhook?.last_error_message && (
+                        <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl space-y-1">
+                          <div className="font-bold flex items-center gap-1.5">
+                            <AlertTriangle size={14} className="text-amber-700" />
+                            Telegram oxirgi marta xabar yuborishda xatolikka uchragan:
+                          </div>
+                          <div className="font-mono text-[11px]">{diagData.webhook.last_error_message}</div>
+                          {diagData.webhook.last_error_date && (
+                            <div className="text-[10px] text-amber-700/80">Sana: {diagData.webhook.last_error_date}</div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pt-1">
+                        <span className="text-[#5A5A40]">Ruxsat etilgan hodisalar (allowed_updates):</span>
+                        <span className="font-mono text-[11px] text-neutral-700">
+                          {diagData.webhook?.allowed_updates?.length 
+                            ? diagData.webhook.allowed_updates.join(", ") 
+                            : "Barcha hodisalar (sukut bo'yicha)"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-5 rounded-2xl border border-black/10 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#1a1a1a]">Vebxukni sozlash va tugmalarni tuzatish</h4>
+                      <p className="text-xs text-[#5A5A40]/70 mt-0.5">
+                        Agar botingiz Vercel'ga yuklangan bo'lsa, Telegram tugma signallarini Vercel'ga jo'natishi uchun Vebxukni ro'yxatdan o'tkazing:
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <button
+                          onClick={() => handleSetWebhook(true)}
+                          disabled={diagLoading}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-violet-600 text-white text-xs font-bold rounded-xl hover:bg-violet-700 transition cursor-pointer shadow-xs disabled:opacity-50"
+                        >
+                          <Zap size={14} />
+                          <span>Vebxukni hozirgi manzilga ulash</span>
+                        </button>
+
+                        <button
+                          onClick={handleDeleteWebhook}
+                          disabled={diagLoading}
+                          className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-neutral-100 text-neutral-800 text-xs font-semibold rounded-xl hover:bg-neutral-200 transition cursor-pointer disabled:opacity-50"
+                        >
+                          <RefreshCw size={14} />
+                          <span>Vebxukni tozalash (Polling rejimiga)</span>
+                        </button>
+                      </div>
+
+                      <div className="pt-2 border-t border-black/5">
+                        <label className="text-[11px] font-semibold text-[#5A5A40] block mb-1">
+                          Yoki Vercel maxsus domen manzilingizni kiriting (masalan: <code>https://my-bot.vercel.app/api/telegram-webhook</code>):
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={customWebhookUrl}
+                            onChange={(e) => setCustomWebhookUrl(e.target.value)}
+                            placeholder="https://sizning-domen.vercel.app/api/telegram-webhook"
+                            className="flex-1 text-xs px-3 py-2 border border-black/10 rounded-xl font-mono focus:outline-none focus:ring-1 focus:ring-violet-600"
+                          />
+                          <button
+                            onClick={() => handleSetWebhook(false)}
+                            disabled={diagLoading || !customWebhookUrl.trim()}
+                            className="px-3 py-2 bg-neutral-900 text-white text-xs font-semibold rounded-xl hover:bg-black transition cursor-pointer disabled:opacity-40"
+                          >
+                            O'rnatish
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

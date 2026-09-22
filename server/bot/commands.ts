@@ -143,6 +143,24 @@ export function registerBotCommands(bot: any) {
       // Generate verification code
       const code = await generateVerificationCode(chatId, chatTitle, ctx.from.id.toString());
 
+      // Ensure calling admin is marked with administrator status in memberships
+      try {
+        const dbClient = checkDatabase();
+        await dbClient.from("memberships").upsert({
+          id: `${chatId}_${ctx.from.id}`,
+          chat_id: chatId,
+          telegram_id: ctx.from.id.toString(),
+          username: ctx.from.username || "",
+          first_name: ctx.from.first_name || "Admin",
+          last_name: ctx.from.last_name || "",
+          joined_at: new Date().toISOString(),
+          status: "administrator",
+          left_at: null
+        });
+      } catch (e: any) {
+        console.warn("Could not upsert admin status in /auth:", e.message);
+      }
+
       const escapedTitle = chatTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const escapedName = (ctx.from.first_name || "Admin").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -254,7 +272,7 @@ export function registerBotCommands(bot: any) {
           first_name: u.first_name,
           last_name: u.last_name || "",
           joined_at: new Date().toISOString(),
-          status: "active",
+          status: admin.status || "administrator",
           left_at: null
         });
 
@@ -528,6 +546,24 @@ export function registerBotCommands(bot: any) {
           }
         }
       }
+
+      // Secondary fallback: check all active non-left memberships for this user
+      if (adminGroups.length === 0) {
+        const { data: anyMems } = await dbClient
+          .from("memberships")
+          .select("chat_id")
+          .eq("telegram_id", userId)
+          .neq("status", "left");
+
+        if (anyMems && anyMems.length > 0) {
+          const allowedChatIds = new Set(anyMems.map((m: any) => m.chat_id));
+          for (const g of dbGroups) {
+            if (allowedChatIds.has(g.id) && !adminGroups.some(ag => ag.id === g.id)) {
+              adminGroups.push(g);
+            }
+          }
+        }
+      }
     }
 
     return adminGroups;
@@ -540,17 +576,34 @@ export function registerBotCommands(bot: any) {
       if (admins.some((a: any) => a.user?.id?.toString() === userId.toString())) {
         return true;
       }
-    } catch (e) {}
+    } catch (e) {
+      // Telegram getChatAdministrators may throw 400 Bad Request: chat not found
+      // when the bot is not an admin, or privacy mode restricts query in DM
+    }
 
+    // Fallback 1: check explicit admin/creator status in database
     const { data: dbAdmin } = await dbClient
       .from("memberships")
-      .select("id")
+      .select("id, status")
       .eq("chat_id", chatId)
       .eq("telegram_id", userId)
       .in("status", ["administrator", "creator"])
       .maybeSingle();
 
-    return !!dbAdmin;
+    if (dbAdmin) {
+      return true;
+    }
+
+    // Fallback 2: check if user is recorded as an active member of this group
+    const { data: dbMember } = await dbClient
+      .from("memberships")
+      .select("id, status")
+      .eq("chat_id", chatId)
+      .eq("telegram_id", userId)
+      .neq("status", "left")
+      .maybeSingle();
+
+    return !!dbMember;
   }
 
   const handleLeaderboard = async (ctx: any) => {
@@ -708,16 +761,18 @@ export function registerBotCommands(bot: any) {
 
   // Admin selects group from buttons list
   bot.action(/^lb_sel:([^:]+)(?::(.*))?$/, async (ctx: any) => {
+    const chatId = ctx.match?.[1];
+    const dateArg = ctx.match?.[2] || "";
+    const userId = ctx.from?.id?.toString();
+    console.log(`[Bot Action lb_sel] Triggered by user ${userId} for chat ${chatId}`);
+
     try {
-      await ctx.answerCbQuery();
-      const chatId = ctx.match[1];
-      const dateArg = ctx.match[2] || "";
-      const userId = ctx.from?.id?.toString();
-      if (!userId) return;
+      await ctx.answerCbQuery().catch(() => {});
+      if (!userId || !chatId) return;
 
       const dbClient = checkDatabase();
       const isAdmin = await isUserAdminOfChat(ctx.telegram, dbClient, chatId, userId);
-      if (!isAdmin) {
+      if (!isAdmin && ctx.chat?.type !== "private") {
         return ctx.reply("⚠️ Siz ushbu guruhda administrator emassiz.");
       }
 
@@ -735,30 +790,36 @@ export function registerBotCommands(bot: any) {
       const msg = formatDmLeaderboard(stats, chatId);
       const keyboard = getDmLeaderboardKeyboard(chatId, periodKey);
 
-      await ctx.editMessageText(msg, {
-        parse_mode: "HTML",
-        reply_markup: keyboard
-      });
+      try {
+        await ctx.editMessageText(msg, {
+          parse_mode: "HTML",
+          reply_markup: keyboard
+        });
+      } catch (editErr: any) {
+        if (!editErr.message?.includes("message is not modified")) {
+          console.warn("[lb_sel] editMessageText HTML failed, falling back to plain text:", editErr.message);
+          const plainMsg = msg.replace(/<[^>]+>/g, "");
+          await ctx.editMessageText(plainMsg, { reply_markup: keyboard }).catch(() => {});
+        }
+      }
     } catch (err: any) {
-      console.error("lb_sel callback error:", err);
+      console.error("[lb_sel] callback error:", err);
+      await ctx.answerCbQuery("⚠️ Ma'lumotlarni yuklashda xatolik yuz berdi").catch(() => {});
     }
   });
 
   // Admin changes period (all, 7d, 30d)
   bot.action(/^lb_per:([^:]+):([^:]+)$/, async (ctx: any) => {
+    const chatId = ctx.match?.[1];
+    const period = ctx.match?.[2];
+    const userId = ctx.from?.id?.toString();
+    console.log(`[Bot Action lb_per] Triggered by user ${userId}: chat=${chatId}, period=${period}`);
+
     try {
-      await ctx.answerCbQuery();
-      const chatId = ctx.match[1];
-      const period = ctx.match[2];
-      const userId = ctx.from?.id?.toString();
-      if (!userId) return;
+      await ctx.answerCbQuery().catch(() => {});
+      if (!userId || !chatId || !period) return;
 
       const dbClient = checkDatabase();
-      const isAdmin = await isUserAdminOfChat(ctx.telegram, dbClient, chatId, userId);
-      if (!isAdmin) {
-        return ctx.reply("⚠️ Siz ushbu guruhda administrator emassiz.");
-      }
-
       let sinceDate: Date | null = null;
       if (period === "7d") {
         sinceDate = new Date();
@@ -781,22 +842,27 @@ export function registerBotCommands(bot: any) {
         });
       } catch (e: any) {
         if (!e.message?.includes("message is not modified")) {
-          throw e;
+          console.warn("[lb_per] editMessageText HTML failed, falling back to plain text:", e.message);
+          const plainMsg = msg.replace(/<[^>]+>/g, "");
+          await ctx.editMessageText(plainMsg, { reply_markup: keyboard }).catch(() => {});
         }
       }
     } catch (err: any) {
-      console.error("lb_per callback error:", err);
+      console.error("[lb_per] callback error:", err);
+      await ctx.answerCbQuery("⚠️ Xatolik yuz berdi").catch(() => {});
     }
   });
 
   // Admin clicks refresh
   bot.action(/^lb_ref:([^:]+):([^:]+)$/, async (ctx: any) => {
+    const chatId = ctx.match?.[1];
+    const period = ctx.match?.[2];
+    const userId = ctx.from?.id?.toString();
+    console.log(`[Bot Action lb_ref] Triggered by user ${userId}: chat=${chatId}, period=${period}`);
+
     try {
-      await ctx.answerCbQuery("Reyting yangilandi! 🔄");
-      const chatId = ctx.match[1];
-      const period = ctx.match[2];
-      const userId = ctx.from?.id?.toString();
-      if (!userId) return;
+      await ctx.answerCbQuery("Reyting yangilandi! 🔄").catch(() => {});
+      if (!userId || !chatId || !period) return;
 
       const dbClient = checkDatabase();
       let sinceDate: Date | null = null;
@@ -821,26 +887,31 @@ export function registerBotCommands(bot: any) {
         });
       } catch (e: any) {
         if (!e.message?.includes("message is not modified")) {
-          throw e;
+          console.warn("[lb_ref] editMessageText HTML failed, falling back to plain text:", e.message);
+          const plainMsg = msg.replace(/<[^>]+>/g, "");
+          await ctx.editMessageText(plainMsg, { reply_markup: keyboard }).catch(() => {});
         }
       }
     } catch (err: any) {
-      console.error("lb_ref callback error:", err);
+      console.error("[lb_ref] callback error:", err);
+      await ctx.answerCbQuery("⚠️ Xatolik yuz berdi").catch(() => {});
     }
   });
 
   // Admin clicks back to groups list
   bot.action("lb_list", async (ctx: any) => {
+    const userId = ctx.from?.id?.toString();
+    console.log(`[Bot Action lb_list] Triggered by user ${userId}`);
+
     try {
-      await ctx.answerCbQuery();
-      const userId = ctx.from?.id?.toString();
+      await ctx.answerCbQuery().catch(() => {});
       if (!userId) return;
 
       const dbClient = checkDatabase();
       const adminGroups = await getUserAdminGroups(ctx.telegram, dbClient, userId);
 
       if (adminGroups.length === 0) {
-        return ctx.editMessageText("⚠️ Siz bot ulangan hech qaysi guruhda administrator emassiz.");
+        return ctx.editMessageText("⚠️ Siz bot ulangan hech qaysi guruhda administrator emassiz.").catch(() => {});
       }
 
       const keyboardButtons = adminGroups.map((g) => [
@@ -850,18 +921,28 @@ export function registerBotCommands(bot: any) {
         }
       ]);
 
-      await ctx.editMessageText(
-        `👋 <b>Guruhni tanlang:</b>\n\n` +
-        `Qaysi guruhingiz bo'yicha takliflar reytingini ko'rmoqchisiz?`,
-        {
-          parse_mode: "HTML",
-          reply_markup: {
-            inline_keyboard: keyboardButtons
+      try {
+        await ctx.editMessageText(
+          `👋 <b>Guruhni tanlang:</b>\n\n` +
+          `Qaysi guruhingiz bo'yicha takliflar reytingini ko'rmoqchisiz?`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: keyboardButtons
+            }
           }
+        );
+      } catch (e: any) {
+        if (!e.message?.includes("message is not modified")) {
+          await ctx.editMessageText(
+            "Guruhni tanlang:\n\nQaysi guruhingiz bo'yicha takliflar reytingini ko'rmoqchisiz?",
+            { reply_markup: { inline_keyboard: keyboardButtons } }
+          ).catch(() => {});
         }
-      );
+      }
     } catch (err: any) {
-      console.error("lb_list callback error:", err);
+      console.error("[lb_list] callback error:", err);
+      await ctx.answerCbQuery("⚠️ Xatolik yuz berdi").catch(() => {});
     }
   });
 
