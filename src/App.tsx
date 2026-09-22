@@ -474,7 +474,9 @@ export default function App() {
         {activeTab === "leaderboard" && (
           <LeaderboardTab 
             leaderboard={leaderboard} 
-            fetchUserDetails={fetchUserDetails} 
+            fetchUserDetails={fetchUserDetails}
+            selectedGroupId={selectedGroupId}
+            contests={contests}
           />
         )}
         

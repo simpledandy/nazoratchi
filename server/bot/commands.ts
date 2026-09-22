@@ -2,6 +2,67 @@ import { checkDatabase } from "../db.js";
 import { checkAndRecordLeavesForGroup } from "./leaves.js";
 import { generateVerificationCode } from "../auth-store.js";
 
+/**
+ * Flexible date parser for leaderboard commands:
+ * Supports:
+ * - Relative: "7d", "30d", "14d", "1d"
+ * - DD.MM.YYYY, DD-MM-YYYY, DD/MM/YYYY (with optional HH:mm)
+ * - YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD (with optional HH:mm)
+ * - ISO string / standard Date parseable strings
+ */
+function parseSinceDate(input?: string): { date: Date | null; label?: string; error?: string } {
+  if (!input || !input.trim()) return { date: null };
+  const str = input.trim();
+
+  // 1. Relative e.g. "7d", "30d", "14d", "1d"
+  const relMatch = str.match(/^(\d+)\s*d(ays?)?$/i);
+  if (relMatch) {
+    const days = parseInt(relMatch[1], 10);
+    if (days > 0 && days <= 730) {
+      const d = new Date();
+      d.setDate(d.getDate() - days);
+      d.setHours(0, 0, 0, 0);
+      return { date: d, label: `Oxirgi ${days} kun (${d.toLocaleDateString("uz-UZ")})` };
+    }
+  }
+
+  // 2. DD.MM.YYYY or DD-MM-YYYY or DD/MM/YYYY (with optional HH:mm)
+  const dmyMatch = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    const hours = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
+    const minutes = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
+    const d = new Date(year, month, day, hours, minutes, 0, 0);
+    if (!isNaN(d.getTime())) {
+      return { date: d, label: d.toLocaleDateString("uz-UZ") };
+    }
+  }
+
+  // 3. YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD (with optional HH:mm)
+  const ymdMatch = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?$/);
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10) - 1;
+    const day = parseInt(ymdMatch[3], 10);
+    const hours = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+    const minutes = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+    const d = new Date(year, month, day, hours, minutes, 0, 0);
+    if (!isNaN(d.getTime())) {
+      return { date: d, label: d.toLocaleDateString("uz-UZ") };
+    }
+  }
+
+  // 4. Try standard JS Date constructor
+  const generic = new Date(str);
+  if (!isNaN(generic.getTime())) {
+    return { date: generic, label: generic.toLocaleDateString("uz-UZ") };
+  }
+
+  return { date: null, error: "Noto'g'ri sana formati" };
+}
+
 export function registerBotCommands(bot: any) {
   // #contest command
   bot.hears(/#contest/i, async (ctx: any) => {
@@ -226,4 +287,199 @@ export function registerBotCommands(bot: any) {
       } catch (e) {}
     }
   });
+
+  // /leaderboard and /top command: Shows who invited how many members since a set date
+  const handleLeaderboard = async (ctx: any) => {
+    try {
+      if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
+        return ctx.reply("Ushbu buyruqni faqat guruhlarda ishlatish mumkin.");
+      }
+
+      const chatId = ctx.chat.id.toString();
+      const chatTitle = (ctx.chat as any).title || "Guruh";
+
+      // Extract argument after /leaderboard or #leaderboard
+      const rawText = (ctx.message?.text || "").trim();
+      let dateArg = ctx.payload ? String(ctx.payload).trim() : "";
+      if (!dateArg && rawText) {
+        // e.g. "/leaderboard 2026-09-01" or "#leaderboard 01.09.2026"
+        const parts = rawText.split(/\s+/);
+        if (parts.length > 1) {
+          dateArg = parts.slice(1).join(" ").trim();
+        }
+      }
+
+      const dbClient = checkDatabase();
+      let sinceDate: Date | null = null;
+      let dateLabel = "";
+      let contestNotice = "";
+
+      if (dateArg) {
+        const parsed = parseSinceDate(dateArg);
+        if (parsed.error || !parsed.date) {
+          return ctx.reply(
+            `⚠️ <b>Noto'g'ri sana formati!</b>\n\n` +
+            `Iltimos, sanani quyidagi formatlardan birida kiriting:\n` +
+            `• <code>/leaderboard 2026-09-01</code> (yil-oy-kun)\n` +
+            `• <code>/leaderboard 01.09.2026</code> (kun.oy.yil)\n` +
+            `• <code>/leaderboard 7d</code> (oxirgi 7 kun)\n` +
+            `• <code>/leaderboard 30d</code> (oxirgi 30 kun)\n\n` +
+            `<i>Yoki shunchaki <code>/leaderboard</code> deb yozsangiz, faol konkurs sanasidan hisoblanadi.</i>`,
+            { parse_mode: "HTML" }
+          );
+        }
+        if (parsed.date.getTime() > Date.now()) {
+          return ctx.reply(
+            `⚠️ Kiritilgan sana kelajakda (${parsed.date.toLocaleDateString("uz-UZ")}). Iltimos, o'tgan yoki bugungi sanani kiriting.`
+          );
+        }
+        sinceDate = parsed.date;
+        dateLabel = parsed.label || sinceDate.toLocaleDateString("uz-UZ");
+      } else {
+        // No date argument passed: check if there is an active contest for this group
+        const { data: activeContests } = await dbClient
+          .from("contests")
+          .select("title, start_date")
+          .eq("chat_id", chatId)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (activeContests && activeContests.length > 0) {
+          const contest = activeContests[0];
+          sinceDate = new Date(contest.start_date);
+          dateLabel = sinceDate.toLocaleDateString("uz-UZ");
+          contestNotice = `🎯 <b>Faol konkurs:</b> ${contest.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}\n`;
+        } else {
+          dateLabel = "Barcha vaqt bo'yicha";
+        }
+      }
+
+      // Query invites recorded for this group
+      let invitesQuery = dbClient
+        .from("invites")
+        .select("inviter_id, invitee_id, timestamp")
+        .eq("chat_id", chatId);
+
+      if (sinceDate) {
+        invitesQuery = invitesQuery.gte("timestamp", sinceDate.toISOString());
+      }
+
+      const { data: invites, error: invitesErr } = await invitesQuery;
+      if (invitesErr) throw invitesErr;
+
+      const escapedTitle = chatTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      if (!invites || invites.length === 0) {
+        return ctx.reply(
+          `🏆 <b>Takliflar Reytingi (Leaderboard)</b>\n` +
+          `👥 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
+          (contestNotice ? `${contestNotice}` : "") +
+          `📅 <b>Ko'rilayotgan davr:</b> ${sinceDate ? `${dateLabel} dan boshlab` : dateLabel}\n\n` +
+          `Hozircha ushbu muddat oralig'ida guruhga hech kim a'zo taklif qilmagan.\n\n` +
+          `Do'stlaringizni taklif qiling va reytingda 1-o'rinni egallang! 🚀\n\n` +
+          `ℹ️ <i>Boshqa sanadan boshlab ko'rish uchun:</i>\n` +
+          `<code>/leaderboard YYYY-MM-DD</code> (masalan: <code>/leaderboard 2026-09-01</code> yoki <code>/leaderboard 7d</code>)`,
+          { parse_mode: "HTML" }
+        );
+      }
+
+      // Tally invitations per inviter
+      const counts: Record<string, number> = {};
+      const inviterInviteesMap: Record<string, string[]> = {};
+
+      for (const inv of invites) {
+        if (!inv.inviter_id) continue;
+        counts[inv.inviter_id] = (counts[inv.inviter_id] || 0) + 1;
+        if (!inviterInviteesMap[inv.inviter_id]) {
+          inviterInviteesMap[inv.inviter_id] = [];
+        }
+        inviterInviteesMap[inv.inviter_id].push(inv.invitee_id);
+      }
+
+      const sortedEntries = Object.entries(counts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 10);
+
+      const topUserIds = sortedEntries.map(([id]) => id);
+
+      // Fetch user profile details
+      const userMap: Record<string, { name: string; username: string }> = {};
+      if (topUserIds.length > 0) {
+        const { data: usersData } = await dbClient
+          .from("users")
+          .select("telegram_id, first_name, last_name, username")
+          .in("telegram_id", topUserIds);
+
+        if (usersData) {
+          for (const u of usersData) {
+            userMap[u.telegram_id] = {
+              name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Foydalanuvchi",
+              username: u.username || ""
+            };
+          }
+        }
+      }
+
+      // Check current active status of invited members
+      const allTopInvitees = topUserIds.flatMap(id => inviterInviteesMap[id] || []);
+      const activeInviteesSet = new Set<string>();
+      if (allTopInvitees.length > 0) {
+        const { data: activeMems } = await dbClient
+          .from("memberships")
+          .select("telegram_id")
+          .eq("chat_id", chatId)
+          .in("telegram_id", allTopInvitees)
+          .neq("status", "left");
+
+        if (activeMems) {
+          for (const m of activeMems) {
+            activeInviteesSet.add(m.telegram_id);
+          }
+        }
+      }
+
+      const medalIcons = ["🥇", "🥈", "🥉"];
+      const lines = sortedEntries.map(([id, totalCount], index) => {
+        const u = userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
+        const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const userTag = u.username ? ` (@${u.username})` : "";
+        const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
+        
+        const invitees = inviterInviteesMap[id] || [];
+        const activeCount = invitees.filter(invId => activeInviteesSet.has(invId)).length;
+        const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
+
+        return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+      });
+
+      const totalInvitesInPeriod = invites.length;
+      const totalUniqueInviters = Object.keys(counts).length;
+
+      const responseMessage = 
+        `🏆 <b>Takliflar Reytingi (Leaderboard)</b>\n` +
+        `👥 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
+        (contestNotice ? `${contestNotice}` : "") +
+        `📅 <b>Sana:</b> ${sinceDate ? `${dateLabel} dan boshlab` : "Barcha vaqt bo'yicha"}\n` +
+        `📊 <b>Jami takliflar:</b> ${totalInvitesInPeriod} ta (${totalUniqueInviters} ta faol ishtirokchi)\n` +
+        `────────────────────\n\n` +
+        lines.join("\n") +
+        `\n\n────────────────────\n` +
+        `ℹ️ <i>Boshqa sanadan boshlab ko'rish:</i>\n` +
+        `<code>/leaderboard YYYY-MM-DD</code> (masalan: <code>/leaderboard 2026-09-01</code> yoki <code>/leaderboard 7d</code>)`;
+
+      await ctx.reply(responseMessage, { parse_mode: "HTML" });
+    } catch (err: any) {
+      console.error("Leaderboard command error:", err);
+      try {
+        await ctx.reply(`Xatolik yuz berdi: ${err.message}`);
+      } catch (e) {}
+    }
+  };
+
+  // Register leaderboard command across multiple intuitive aliases
+  bot.command("leaderboard", handleLeaderboard);
+  bot.command("top", handleLeaderboard);
+  bot.command("reyting", handleLeaderboard);
+  bot.hears(/^#?(leaderboard|reyting|top)(\s+.*)?$/i, handleLeaderboard);
 }

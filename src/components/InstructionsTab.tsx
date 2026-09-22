@@ -398,6 +398,82 @@ export default function InstructionsTab() {
                     )}
                   </button>
                 </div>
+
+                <h4 className="font-bold text-[#1a1a1a] mt-6">Kim qancha odam taklif qilganini tekshirish (/leaderboard):</h4>
+                <p className="text-xs">
+                  Guruh a'zolari va adminlar guruhda istalgan vaqtda kim qancha odam qo'shganini va reytingning eng kuchli 10 taligini ko'rishlari mumkin. Sanani ham ko'rsatish imkoniyati mavjud:
+                </p>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                    <div>
+                      <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard</code>
+                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Faol konkurs boshlanganidan beri (yoki barcha vaqt)</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy("/leaderboard", "lb-def")}
+                      className="flex items-center gap-1.5 text-xs text-[#5A5A40] font-bold hover:text-black cursor-pointer bg-white px-3 py-1.5 rounded-lg shadow-2xs"
+                    >
+                      {copiedText === "lb-def" ? (
+                        <>
+                          <Check size={14} className="text-emerald-600" />
+                          <span>Nusxa olindi!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          <span>Nusxa olish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                    <div>
+                      <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard 2026-09-01</code>
+                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Belgilangan sanadan (yil-oy-kun yoki kun.oy.yil) boshlab</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy("/leaderboard 2026-09-01", "lb-date")}
+                      className="flex items-center gap-1.5 text-xs text-[#5A5A40] font-bold hover:text-black cursor-pointer bg-white px-3 py-1.5 rounded-lg shadow-2xs"
+                    >
+                      {copiedText === "lb-date" ? (
+                        <>
+                          <Check size={14} className="text-emerald-600" />
+                          <span>Nusxa olindi!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          <span>Nusxa olish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
+                    <div>
+                      <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard 7d</code>
+                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Oxirgi 7 kunlik (yoki <code>30d</code>) natijalar</p>
+                    </div>
+                    <button
+                      onClick={() => handleCopy("/leaderboard 7d", "lb-7d")}
+                      className="flex items-center gap-1.5 text-xs text-[#5A5A40] font-bold hover:text-black cursor-pointer bg-white px-3 py-1.5 rounded-lg shadow-2xs"
+                    >
+                      {copiedText === "lb-7d" ? (
+                        <>
+                          <Check size={14} className="text-emerald-600" />
+                          <span>Nusxa olindi!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={14} />
+                          <span>Nusxa olish</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

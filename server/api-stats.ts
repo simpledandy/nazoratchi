@@ -42,12 +42,8 @@ router.get("/stats", async (req, res) => {
       return res.status(403).json({ error: "Ushbu guruh ma'lumotlarini ko'rishga ruxsatingiz yo'q!" });
     }
 
-    // Passive leaves calculation: Trigger background retroactive leaves sync
-    if (chatId && bot && typeof checkAndRecordLeavesForGroup === "function") {
-      checkAndRecordLeavesForGroup(bot.telegram, chatId as string).catch(err => {
-        console.error("Background leaves check failed:", err);
-      });
-    }
+    // Remove synchronous/background leaves scan on page load to prevent serverless execution blocking and high latency.
+    // Leaves are recorded automatically in real-time via Telegram chat_member webhooks.
 
     const dbClient = checkDatabase();
     
@@ -68,27 +64,14 @@ router.get("/stats", async (req, res) => {
     ]);
     
     let totalMembersCount = 0;
+    // Calculate total active members directly from Supabase database (instant ~10ms query)
     if (chatId) {
-      if (bot) {
-        try {
-          totalMembersCount = await bot.telegram.getChatMembersCount(chatId as string);
-        } catch (botErr) {
-          console.warn("Could not fetch member count from Telegram API, falling back to db:", botErr);
-          const { count } = await dbClient
-            .from("memberships")
-            .select("*", { count: "exact", head: true })
-            .eq("chat_id", chatId)
-            .not("status", "eq", "left");
-          totalMembersCount = count || 0;
-        }
-      } else {
-        const { count } = await dbClient
-          .from("memberships")
-          .select("*", { count: "exact", head: true })
-          .eq("chat_id", chatId)
-          .not("status", "eq", "left");
-        totalMembersCount = count || 0;
-      }
+      const { count } = await dbClient
+        .from("memberships")
+        .select("*", { count: "exact", head: true })
+        .eq("chat_id", chatId)
+        .not("status", "eq", "left");
+      totalMembersCount = count || 0;
     } else {
       const { count } = await dbClient
         .from("memberships")
@@ -229,7 +212,7 @@ router.get("/stats", async (req, res) => {
 // Retrieve top inviters leaderboard
 router.get("/leaderboard", async (req, res) => {
   try {
-    const { chatId } = req.query;
+    const { chatId, since } = req.query;
     const verifiedChatIds = getVerifiedChats(req);
 
     if (verifiedChatIds.length === 0) {
@@ -242,11 +225,18 @@ router.get("/leaderboard", async (req, res) => {
 
     const dbClient = checkDatabase();
     
-    let invitesQuery = dbClient.from("invites").select("inviter_id");
+    let invitesQuery = dbClient.from("invites").select("inviter_id, timestamp");
     if (chatId) {
       invitesQuery = invitesQuery.eq("chat_id", chatId);
     } else {
       invitesQuery = invitesQuery.in("chat_id", verifiedChatIds);
+    }
+
+    if (since && typeof since === "string" && since.trim()) {
+      const parsedDate = new Date(since.trim());
+      if (!isNaN(parsedDate.getTime())) {
+        invitesQuery = invitesQuery.gte("timestamp", parsedDate.toISOString());
+      }
     }
 
     const { data: invites, error } = await invitesQuery;
@@ -259,23 +249,31 @@ router.get("/leaderboard", async (req, res) => {
       });
     }
 
-    const leaderboard = await Promise.all(
-      Object.entries(counts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10)
-        .map(async ([id, count]) => {
-          const { data: userData } = await dbClient
-            .from("users")
-            .select("*")
-            .eq("telegram_id", id)
-            .single();
-          return {
-            id,
-            count,
-            name: userData ? `${userData.first_name} ${userData.last_name || ""}`.trim() : "Noma'lum foydalanuvchi"
-          };
-        })
-    );
+    const topEntries = Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10);
+
+    const topUserIds = topEntries.map(([id]) => id);
+    const userNamesMap: Record<string, string> = {};
+
+    if (topUserIds.length > 0) {
+      const { data: usersData } = await dbClient
+        .from("users")
+        .select("telegram_id, first_name, last_name")
+        .in("telegram_id", topUserIds);
+
+      if (usersData) {
+        usersData.forEach((u: any) => {
+          userNamesMap[u.telegram_id] = `${u.first_name || ""} ${u.last_name || ""}`.trim();
+        });
+      }
+    }
+
+    const leaderboard = topEntries.map(([id, count]) => ({
+      id,
+      count,
+      name: userNamesMap[id] || "Noma'lum foydalanuvchi"
+    }));
 
     res.json(leaderboard);
   } catch (error: any) {
@@ -349,14 +347,27 @@ router.get("/users/:id/details", async (req, res) => {
     if (error) throw error;
     
     const detailedInvites = [];
-    if (invites) {
+    if (invites && invites.length > 0) {
       invites.sort((a: any, b: any) => b.timestamp.localeCompare(a.timestamp));
-      for (const inv of invites) {
-        const { data: inviteeData } = await dbClient
+      
+      const inviteeIds = Array.from(new Set(invites.map((inv: any) => inv.invitee_id)));
+      const inviteesMap: Record<string, any> = {};
+
+      if (inviteeIds.length > 0) {
+        const { data: inviteesData } = await dbClient
           .from("users")
-          .select("*")
-          .eq("telegram_id", inv.invitee_id)
-          .single();
+          .select("telegram_id, username, first_name, last_name, joined_at")
+          .in("telegram_id", inviteeIds);
+
+        if (inviteesData) {
+          inviteesData.forEach((u: any) => {
+            inviteesMap[u.telegram_id] = u;
+          });
+        }
+      }
+
+      for (const inv of invites) {
+        const inviteeData = inviteesMap[inv.invitee_id];
         detailedInvites.push({
           inviterId: inv.inviter_id,
           inviteeId: inv.invitee_id,

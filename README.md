@@ -126,6 +126,7 @@ The backend is backed by an efficient, relational PostgreSQL database layout:
 | Command / Trigger | Target Audience | Functionality |
 | :--- | :--- | :--- |
 | **`#contest`** | All Group Members | Displays information about the active contest, start/end dates, cash/gift prizes, and rules. |
+| **`/leaderboard [sana]`** / **`/top [sana]`** | All Group Members | Displays real-time referral leaderboard ranking members by how many users they invited since a set date (e.g. `/leaderboard 2026-09-01` or `/leaderboard 7d`). Defaults to the active contest start date if no date is specified. |
 | **`/auth`** | Group Administrators | Generates a secure, temporary, 6-digit web dashboard verification code. Sent via Telegram Private Messages (DMs) to preserve security. |
 | **`/sync`** | Group Administrators | Triggers an immediate, retroactive synchronization. Imports administrator memberships and tallies active members with the official Telegram API. |
 
