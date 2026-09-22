@@ -123,12 +123,13 @@ The backend is backed by an efficient, relational PostgreSQL database layout:
 
 ## 🤖 Supported Telegram Bot Commands
 
-| Command / Trigger | Target Audience | Functionality |
-| :--- | :--- | :--- |
-| **`#contest`** | All Group Members | Displays information about the active contest, start/end dates, cash/gift prizes, and rules. |
-| **`/leaderboard [sana]`** / **`/top [sana]`** | All Group Members | Displays real-time referral leaderboard ranking members by how many users they invited since a set date (e.g. `/leaderboard 2026-09-01` or `/leaderboard 7d`). Defaults to the active contest start date if no date is specified. |
-| **`/auth`** | Group Administrators | Generates a secure, temporary, 6-digit web dashboard verification code. Sent via Telegram Private Messages (DMs) to preserve security. |
-| **`/sync`** | Group Administrators | Triggers an immediate, retroactive synchronization. Imports administrator memberships and tallies active members with the official Telegram API. |
+| Command / Trigger | Target Audience | Location | Functionality |
+| :--- | :--- | :--- | :--- |
+| **`#contest`** | All Group Members | Group Chat | Displays information about the active contest, start/end dates, cash/gift prizes, and rules. |
+| **`/leaderboard [sana]`** / **`/top [sana]`** | All Group Members | Group Chat | Automatically deletes the command message from the group to maintain a clean chat. Displays a clean, minimal leaderboard (`🏆 Takliflar Reytingi`) showing the top 10 inviters, active retention, and an encouraging call to action to add contacts to reach the top. |
+| **`/leaderboard [guruh_id] [sana]`** | Group Administrators | Bot DM (Private Chat) | **Admin Interactive Hub:** If group ID is omitted, displays interactive buttons for all groups where the user is an administrator. Renders full detailed statistics (Group name, Active contest, Time period, Total invites, Active participants) along with inline buttons to switch periods (`Barcha vaqt`, `Oxirgi 7 kun`, `Oxirgi 30 kun`), refresh data (`🔄 Yangilash`), or choose another group (`🔙 Guruhlar ro'yxati`). |
+| **`/auth`** | Group Administrators | Group Chat | Generates a temporary 6-digit access code sent directly to the administrator's private messages (DMs) for web dashboard access. Automatically deletes the trigger command message to protect group confidentiality. |
+| **`/sync`** | Group Administrators | Group Chat | Triggers retroactive synchronization with the official Telegram API, imports administrator memberships, tallies active members, and cleans up the command and status messages automatically. |
 
 ---
 

@@ -114,31 +114,37 @@ export default function LeaderboardTab({
         </div>
 
         {/* Telegram Command Badge with One-Click Copy */}
-        <div className="bg-[#F5F5F0] border border-black/5 p-2.5 px-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <Trophy size={14} className="text-[#5A5A40]" />
-            <span className="text-[#5A5A40]/70">Telegram buyrug'i:</span>
-            <code className="font-mono font-bold text-[#1a1a1a] bg-white px-2 py-0.5 rounded-md border border-black/5">
-              {getSuggestedCommand()}
-            </code>
+        <div className="flex flex-col items-start md:items-end gap-1.5">
+          <div className="bg-[#F5F5F0] border border-black/5 p-2.5 px-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2">
+              <Trophy size={14} className="text-[#5A5A40]" />
+              <span className="text-[#5A5A40]/70">Telegram buyrug'i:</span>
+              <code className="font-mono font-bold text-[#1a1a1a] bg-white px-2 py-0.5 rounded-md border border-black/5">
+                {getSuggestedCommand()}
+              </code>
+            </div>
+            <button
+              onClick={handleCopyCommand}
+              className="flex items-center gap-1 font-bold text-[#5A5A40] hover:text-black transition-colors cursor-pointer bg-white px-2 py-1 rounded-md border border-black/5 shadow-2xs"
+              title="Nusxa olish"
+            >
+              {copiedCmd ? (
+                <>
+                  <Check size={12} className="text-emerald-600" />
+                  <span className="text-emerald-600">Nusxalandi</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={12} />
+                  <span>Nusxa</span>
+                </>
+              )}
+            </button>
           </div>
-          <button
-            onClick={handleCopyCommand}
-            className="flex items-center gap-1 font-bold text-[#5A5A40] hover:text-black transition-colors cursor-pointer bg-white px-2 py-1 rounded-md border border-black/5 shadow-2xs"
-            title="Nusxa olish"
-          >
-            {copiedCmd ? (
-              <>
-                <Check size={12} className="text-emerald-600" />
-                <span className="text-emerald-600">Nusxalandi</span>
-              </>
-            ) : (
-              <>
-                <Copy size={12} />
-                <span>Nusxa</span>
-              </>
-            )}
-          </button>
+          <span className="text-[11px] text-[#5A5A40]/65 flex items-center gap-1 px-1">
+            <Sparkles size={11} className="text-amber-600 shrink-0" />
+            <span>Guruhda buyruq xabari avtomatik tozalanadi va faqat reyting ko'rinadi</span>
+          </span>
         </div>
       </header>
 

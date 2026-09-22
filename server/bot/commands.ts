@@ -280,6 +280,11 @@ export function registerBotCommands(bot: any) {
         } catch (e) {}
       }, 15000);
 
+      // Delete the trigger message from the group to keep chat tidy
+      try {
+        await ctx.deleteMessage();
+      } catch (e) {}
+
     } catch (err: any) {
       console.error("Sync error:", err);
       try {
@@ -399,10 +404,12 @@ export function registerBotCommands(bot: any) {
     };
   }
 
-  // Format clean leaderboard message for group chats (no Guruh, no Ko'rilayotgan davr, no footer info)
+  // Format clean leaderboard message for group chats (minimal headers, preserves call to action)
   function formatGroupLeaderboard(stats: any): string {
+    const ctaLine = `\n\n💡 <i>Guruhga kontaktlaringizni qo'shing va reytingda yuqori o'ringa chiqing!</i>`;
+
     if (!stats.sortedEntries || stats.sortedEntries.length === 0) {
-      return `🏆 <b>Takliflar Reytingi</b>\n\nHozircha ushbu muddat oralig'ida hech kim a'zo taklif qilmagan.`;
+      return `🏆 <b>Takliflar Reytingi</b>\n\nHozircha ushbu muddat oralig'ida hech kim a'zo taklif qilmagan.${ctaLine}`;
     }
 
     const medalIcons = ["🥇", "🥈", "🥉"];
@@ -419,7 +426,7 @@ export function registerBotCommands(bot: any) {
       return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
     });
 
-    return `🏆 <b>Takliflar Reytingi</b>\n\n${lines.join("\n")}`;
+    return `🏆 <b>Takliflar Reytingi</b>\n\n${lines.join("\n")}${ctaLine}`;
   }
 
   // Format comprehensive leaderboard message for admin direct messages (DM)
@@ -563,6 +570,11 @@ export function registerBotCommands(bot: any) {
       // CASE 1: GROUP CHAT EXECUTION
       // ─────────────────────────────────────────────────────────────
       if (isGroup) {
+        // Automatically delete the user's command message from the group to keep the chat tidy and prevent members from seeing it
+        try {
+          await ctx.deleteMessage();
+        } catch (e) {}
+
         const chatId = ctx.chat.id.toString();
         let dateArg = parts.join(" ").trim();
 

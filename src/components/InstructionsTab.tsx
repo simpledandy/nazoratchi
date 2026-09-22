@@ -408,13 +408,19 @@ export default function InstructionsTab() {
                   <div className="bg-[#F5F5F0] p-3.5 rounded-2xl border border-black/5 space-y-1.5">
                     <span className="font-bold text-emerald-800 flex items-center gap-1">👥 Guruh ichida (Ixcham format)</span>
                     <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
-                      Guruhda ortiqcha xabarlar va shovqin bo'lmasligi uchun faqat <strong>Takliflar Reytingi</strong> sarlavhasi va eng faol 10 nafar taklifchi ro'yxati chiqadi (Guruh nomi, sana va pastdagi tavsiyalar ko'rsatilmaydi).
+                      A'zolar yoki adminlar yozgan <code>/leaderboard</code> (yoki <code>/top</code>) buyrug'i <strong>bot tomonidan darhol guruhdan o'chirib tashlanadi</strong>, shuning uchun guruh a'zolari ortiqcha buyruq xabarlarini ko'rishmaydi va chat toza saqlanadi.
+                    </p>
+                    <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
+                      Natijada guruhda faqat <strong>🏆 Takliflar Reytingi</strong> sarlavhasi, eng faol 10 nafar taklifchi ro'yxati va a'zolarni o'z kontaktlarini qo'shishga chorlovchi eslatma chiqadi (ortiqcha boshqaruv paneli sarlavhalarisiz).
                     </p>
                   </div>
                   <div className="bg-[#F5F5F0] p-3.5 rounded-2xl border border-black/5 space-y-1.5">
                     <span className="font-bold text-blue-800 flex items-center gap-1">🤖 Bot DM da (Adminlar uchun interaktiv)</span>
                     <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
-                      Faqat adminlar uchun. Agar guruh ko'rsatilmasa, admin boshqaradigan guruhlar tugmalari chiqadi. To'liq hisobot (Guruh, Davr, Jami takliflar, faol a'zolar) va interaktiv tugmalar (7 kun, 30 kun, Yangilash) mavjud.
+                      Faqat guruh administratorlari uchun. Agar admin guruh ID sini ko'rsatmasa, bot o'sha admin faol bo'lgan guruhlar ro'yxatini interaktiv tugmalar shaklida chiqaradi.
+                    </p>
+                    <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
+                      DM da to'liq hisobot (Guruh nomi, Konkurs nomi, Davr, Jami takliflar, faol a'zolar) va muddatni almashtirish (7 kun, 30 kun, Barcha vaqt, Yangilash) tugmalari ishlaydi.
                     </p>
                   </div>
                 </div>
