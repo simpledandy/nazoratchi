@@ -289,186 +289,399 @@ export function registerBotCommands(bot: any) {
   });
 
   // /leaderboard and /top command: Shows who invited how many members since a set date
+  // Helper: Fetch leaderboard statistics for a specific chat ID and sinceDate
+  async function fetchLeaderboardStats(dbClient: any, chatId: string, sinceDate: Date | null) {
+    const { data: grpData } = await dbClient
+      .from("groups")
+      .select("title")
+      .eq("id", chatId)
+      .maybeSingle();
+
+    const chatTitle = grpData?.title || "Guruh";
+
+    let effectiveSince = sinceDate;
+    let contestTitle = "";
+    let dateLabel = sinceDate ? sinceDate.toLocaleDateString("uz-UZ") : "";
+
+    if (!effectiveSince) {
+      const { data: activeContests } = await dbClient
+        .from("contests")
+        .select("title, start_date")
+        .eq("chat_id", chatId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (activeContests && activeContests.length > 0) {
+        effectiveSince = new Date(activeContests[0].start_date);
+        contestTitle = activeContests[0].title;
+        dateLabel = effectiveSince.toLocaleDateString("uz-UZ");
+      } else {
+        dateLabel = "Barcha vaqt bo'yicha";
+      }
+    }
+
+    let invitesQuery = dbClient
+      .from("invites")
+      .select("inviter_id, invitee_id, timestamp")
+      .eq("chat_id", chatId);
+
+    if (effectiveSince) {
+      invitesQuery = invitesQuery.gte("timestamp", effectiveSince.toISOString());
+    }
+
+    const { data: invites, error: invitesErr } = await invitesQuery;
+    if (invitesErr) throw invitesErr;
+
+    const counts: Record<string, number> = {};
+    const inviterInviteesMap: Record<string, string[]> = {};
+
+    for (const inv of (invites || [])) {
+      if (!inv.inviter_id) continue;
+      counts[inv.inviter_id] = (counts[inv.inviter_id] || 0) + 1;
+      if (!inviterInviteesMap[inv.inviter_id]) {
+        inviterInviteesMap[inv.inviter_id] = [];
+      }
+      inviterInviteesMap[inv.inviter_id].push(inv.invitee_id);
+    }
+
+    const sortedEntries = Object.entries(counts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10);
+
+    const topUserIds = sortedEntries.map(([id]) => id);
+
+    const userMap: Record<string, { name: string; username: string }> = {};
+    if (topUserIds.length > 0) {
+      const { data: usersData } = await dbClient
+        .from("users")
+        .select("telegram_id, first_name, last_name, username")
+        .in("telegram_id", topUserIds);
+
+      if (usersData) {
+        for (const u of usersData) {
+          userMap[u.telegram_id] = {
+            name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Foydalanuvchi",
+            username: u.username || ""
+          };
+        }
+      }
+    }
+
+    const allTopInvitees = topUserIds.flatMap(id => inviterInviteesMap[id] || []);
+    const activeInviteesSet = new Set<string>();
+    if (allTopInvitees.length > 0) {
+      const { data: activeMems } = await dbClient
+        .from("memberships")
+        .select("telegram_id")
+        .eq("chat_id", chatId)
+        .in("telegram_id", allTopInvitees)
+        .neq("status", "left");
+
+      if (activeMems) {
+        for (const m of activeMems) {
+          activeInviteesSet.add(m.telegram_id);
+        }
+      }
+    }
+
+    return {
+      chatTitle,
+      sinceDate: effectiveSince,
+      dateLabel,
+      contestTitle,
+      totalInvites: (invites || []).length,
+      totalUniqueInviters: Object.keys(counts).length,
+      sortedEntries,
+      userMap,
+      inviterInviteesMap,
+      activeInviteesSet
+    };
+  }
+
+  // Format clean leaderboard message for group chats (no Guruh, no Ko'rilayotgan davr, no footer info)
+  function formatGroupLeaderboard(stats: any): string {
+    if (!stats.sortedEntries || stats.sortedEntries.length === 0) {
+      return `🏆 <b>Takliflar Reytingi</b>\n\nHozircha ushbu muddat oralig'ida hech kim a'zo taklif qilmagan.`;
+    }
+
+    const medalIcons = ["🥇", "🥈", "🥉"];
+    const lines = stats.sortedEntries.map(([id, totalCount]: [string, number], index: number) => {
+      const u = stats.userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
+      const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const userTag = u.username ? ` (@${u.username})` : "";
+      const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
+
+      const invitees = stats.inviterInviteesMap[id] || [];
+      const activeCount = invitees.filter((invId: string) => stats.activeInviteesSet.has(invId)).length;
+      const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
+
+      return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+    });
+
+    return `🏆 <b>Takliflar Reytingi</b>\n\n${lines.join("\n")}`;
+  }
+
+  // Format comprehensive leaderboard message for admin direct messages (DM)
+  function formatDmLeaderboard(stats: any, chatId: string): string {
+    const escapedTitle = (stats.chatTitle || "Guruh").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const contestNotice = stats.contestTitle 
+      ? `🎯 <b>Faol konkurs:</b> ${stats.contestTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}\n` 
+      : "";
+
+    let listContent = "";
+    if (!stats.sortedEntries || stats.sortedEntries.length === 0) {
+      listContent = "Hozircha ushbu muddat oralig'ida hech kim a'zo taklif qilmagan.";
+    } else {
+      const medalIcons = ["🥇", "🥈", "🥉"];
+      const lines = stats.sortedEntries.map(([id, totalCount]: [string, number], index: number) => {
+        const u = stats.userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
+        const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const userTag = u.username ? ` (@${u.username})` : "";
+        const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
+
+        const invitees = stats.inviterInviteesMap[id] || [];
+        const activeCount = invitees.filter((invId: string) => stats.activeInviteesSet.has(invId)).length;
+        const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
+
+        return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+      });
+      listContent = lines.join("\n");
+    }
+
+    return (
+      `🏆 <b>Takliflar Reytingi (Leaderboard)</b>\n` +
+      `👥 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
+      contestNotice +
+      `📅 <b>Ko'rilayotgan davr:</b> ${stats.sinceDate ? `${stats.dateLabel} dan boshlab` : stats.dateLabel}\n` +
+      `📊 <b>Jami takliflar:</b> ${stats.totalInvites} ta (${stats.totalUniqueInviters} ta faol ishtirokchi)\n` +
+      `────────────────────\n\n` +
+      listContent +
+      `\n\n────────────────────\n` +
+      `ℹ️ <i>Boshqa sanadan boshlab ko'rish uchun:</i>\n` +
+      `<code>/leaderboard ${chatId} YYYY-MM-DD</code> (masalan: <code>/leaderboard ${chatId} 2026-09-01</code> yoki <code>/leaderboard ${chatId} 7d</code>)`
+    );
+  }
+
+  function getDmLeaderboardKeyboard(chatId: string, currentPeriod = "all") {
+    return {
+      inline_keyboard: [
+        [
+          { text: currentPeriod === "all" ? "• Barcha vaqt •" : "Barcha vaqt", callback_data: `lb_per:${chatId}:all` },
+          { text: currentPeriod === "7d" ? "• Oxirgi 7 kun •" : "Oxirgi 7 kun", callback_data: `lb_per:${chatId}:7d` },
+          { text: currentPeriod === "30d" ? "• Oxirgi 30 kun •" : "Oxirgi 30 kun", callback_data: `lb_per:${chatId}:30d` },
+        ],
+        [
+          { text: "🔄 Yangilash", callback_data: `lb_ref:${chatId}:${currentPeriod}` },
+          { text: "🔙 Guruhlar ro'yxati", callback_data: "lb_list" },
+        ]
+      ]
+    };
+  }
+
+  // Helper: Find all groups where user is administrator or creator
+  async function getUserAdminGroups(telegram: any, dbClient: any, userId: string): Promise<{ id: string; title: string }[]> {
+    const { data: dbGroups } = await dbClient.from("groups").select("id, title");
+    if (!dbGroups || dbGroups.length === 0) return [];
+
+    const adminGroups: { id: string; title: string }[] = [];
+
+    const checks = await Promise.allSettled(
+      dbGroups.map(async (g: any) => {
+        try {
+          const admins = await telegram.getChatAdministrators(g.id);
+          const isAdmin = admins.some((a: any) => a.user?.id?.toString() === userId.toString());
+          if (isAdmin) return g;
+        } catch (e) {
+          // Chat not accessible or bot removed
+        }
+        return null;
+      })
+    );
+
+    for (const c of checks) {
+      if (c.status === "fulfilled" && c.value) {
+        adminGroups.push(c.value);
+      }
+    }
+
+    // Fallback to database memberships if direct Telegram check returned empty
+    if (adminGroups.length === 0) {
+      const { data: dbAdmins } = await dbClient
+        .from("memberships")
+        .select("chat_id")
+        .eq("telegram_id", userId)
+        .in("status", ["administrator", "creator"]);
+
+      if (dbAdmins && dbAdmins.length > 0) {
+        const allowedChatIds = new Set(dbAdmins.map((m: any) => m.chat_id));
+        for (const g of dbGroups) {
+          if (allowedChatIds.has(g.id) && !adminGroups.some(ag => ag.id === g.id)) {
+            adminGroups.push(g);
+          }
+        }
+      }
+    }
+
+    return adminGroups;
+  }
+
+  // Helper: Check if user is admin of a specific target chat
+  async function isUserAdminOfChat(telegram: any, dbClient: any, chatId: string, userId: string): Promise<boolean> {
+    try {
+      const admins = await telegram.getChatAdministrators(chatId);
+      if (admins.some((a: any) => a.user?.id?.toString() === userId.toString())) {
+        return true;
+      }
+    } catch (e) {}
+
+    const { data: dbAdmin } = await dbClient
+      .from("memberships")
+      .select("id")
+      .eq("chat_id", chatId)
+      .eq("telegram_id", userId)
+      .in("status", ["administrator", "creator"])
+      .maybeSingle();
+
+    return !!dbAdmin;
+  }
+
   const handleLeaderboard = async (ctx: any) => {
     try {
-      if (!ctx.chat || (ctx.chat.type !== "group" && ctx.chat.type !== "supergroup")) {
-        return ctx.reply("Ushbu buyruqni faqat guruhlarda ishlatish mumkin.");
+      const isPrivate = ctx.chat?.type === "private";
+      const isGroup = ctx.chat?.type === "group" || ctx.chat?.type === "supergroup";
+      const dbClient = checkDatabase();
+
+      if (!isPrivate && !isGroup) {
+        return ctx.reply("Ushbu buyruq faqat guruhlar yoki bot bilan shaxsiy yozishmada ishlaydi.");
       }
 
-      const chatId = ctx.chat.id.toString();
-      const chatTitle = (ctx.chat as any).title || "Guruh";
-
-      // Extract argument after /leaderboard or #leaderboard
       const rawText = (ctx.message?.text || "").trim();
-      let dateArg = ctx.payload ? String(ctx.payload).trim() : "";
-      if (!dateArg && rawText) {
-        // e.g. "/leaderboard 2026-09-01" or "#leaderboard 01.09.2026"
-        const parts = rawText.split(/\s+/);
-        if (parts.length > 1) {
-          dateArg = parts.slice(1).join(" ").trim();
+      const parts = rawText.split(/\s+/).slice(1); // tokens after command
+
+      // ─────────────────────────────────────────────────────────────
+      // CASE 1: GROUP CHAT EXECUTION
+      // ─────────────────────────────────────────────────────────────
+      if (isGroup) {
+        const chatId = ctx.chat.id.toString();
+        let dateArg = parts.join(" ").trim();
+
+        let sinceDate: Date | null = null;
+        if (dateArg) {
+          const parsed = parseSinceDate(dateArg);
+          if (parsed.error || !parsed.date) {
+            return ctx.reply(
+              `⚠️ <b>Noto'g'ri sana formati!</b>\n\n` +
+              `Iltimos, sanani quyidagi formatda kiriting:\n` +
+              `• <code>/leaderboard 2026-09-01</code> (yil-oy-kun)\n` +
+              `• <code>/leaderboard 01.09.2026</code> (kun.oy.yil)\n` +
+              `• <code>/leaderboard 7d</code> (oxirgi 7 kun)`,
+              { parse_mode: "HTML" }
+            );
+          }
+          if (parsed.date.getTime() > Date.now()) {
+            return ctx.reply(`⚠️ Kiritilgan sana kelajakda. Iltimos, o'tgan yoki bugungi sanani kiriting.`);
+          }
+          sinceDate = parsed.date;
+        }
+
+        const stats = await fetchLeaderboardStats(dbClient, chatId, sinceDate);
+        const groupMsg = formatGroupLeaderboard(stats);
+        return await ctx.reply(groupMsg, { parse_mode: "HTML" });
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // CASE 2: BOT DM (PRIVATE CHAT) - FOR ADMINS ONLY
+      // ─────────────────────────────────────────────────────────────
+      const userId = ctx.from?.id?.toString();
+      if (!userId) {
+        return ctx.reply("Foydalanuvchi ma'lumotlarini aniqlab bo'lmadi.");
+      }
+
+      // Check admin status
+      const adminGroups = await getUserAdminGroups(ctx.telegram, dbClient, userId);
+      if (adminGroups.length === 0) {
+        return ctx.reply(
+          `⚠️ <b>Ruxsat berilmadi</b>\n\n` +
+          `Ushbu bo'lim faqat guruh administratorlari uchun mo'ljallangan.\n` +
+          `Siz bot ulangan hech bir guruhda administrator sifatida aniqlanmadingiz.\n\n` +
+          `<i>Agar siz guruhda admin bo'lsangiz, botni guruhga admin qiling va o'sha guruhda <code>/sync</code> buyrug'ini yuboring.</i>`,
+          { parse_mode: "HTML" }
+        );
+      }
+
+      // Check if admin passed a group ID or date in their command
+      // e.g. "/leaderboard -1001234567890" or "/leaderboard -1001234567890 2026-09-01" or "/leaderboard 7d"
+      let specifiedChatId: string | null = null;
+      let dateArg: string | null = null;
+
+      for (const part of parts) {
+        if (/^-?\d{5,}$/.test(part) || adminGroups.some(g => g.id === part)) {
+          specifiedChatId = part;
+        } else {
+          dateArg = dateArg ? `${dateArg} ${part}` : part;
         }
       }
 
-      const dbClient = checkDatabase();
-      let sinceDate: Date | null = null;
-      let dateLabel = "";
-      let contestNotice = "";
+      // If admin left out the group ID: send interactive buttons with their groups
+      if (!specifiedChatId) {
+        const keyboardButtons = adminGroups.map((g) => [
+          {
+            text: `👥 ${g.title || "Guruh"}`,
+            callback_data: `lb_sel:${g.id}${dateArg ? `:${dateArg}` : ""}`
+          }
+        ]);
 
+        return await ctx.reply(
+          `👋 <b>Assalomu alaykum, hurmatli administrator!</b>\n\n` +
+          `Qaysi guruhingiz bo'yicha takliflar reytingini (leaderboard) ko'rmoqchisiz? Quyidagi guruhlardan birini tanlang:\n\n` +
+          `<i>💡 Shuningdek, to'g'ridan-to'g'ri guruh ID si bilan ham ko'rishingiz mumkin:</i>\n` +
+          `<code>/leaderboard &lt;guruh_id&gt; [sana]</code>`,
+          {
+            parse_mode: "HTML",
+            reply_markup: {
+              inline_keyboard: keyboardButtons
+            }
+          }
+        );
+      }
+
+      // If admin specified a group ID: verify they are an admin of that group
+      const isAdminOfTarget = await isUserAdminOfChat(ctx.telegram, dbClient, specifiedChatId, userId);
+      if (!isAdminOfTarget) {
+        return ctx.reply(
+          `⚠️ Siz <code>${specifiedChatId}</code> guruhida administrator emassiz yoki bunday guruh topilmadi.\n\n` +
+          `Iltimos, faqat o'zingiz admin bo'lgan guruh ID sini kiriting yoki shunchaki <code>/leaderboard</code> deb yozib ro'yxatdan tanlang.`,
+          { parse_mode: "HTML" }
+        );
+      }
+
+      let sinceDate: Date | null = null;
+      let periodKey = "all";
       if (dateArg) {
         const parsed = parseSinceDate(dateArg);
         if (parsed.error || !parsed.date) {
           return ctx.reply(
             `⚠️ <b>Noto'g'ri sana formati!</b>\n\n` +
             `Iltimos, sanani quyidagi formatlardan birida kiriting:\n` +
-            `• <code>/leaderboard 2026-09-01</code> (yil-oy-kun)\n` +
-            `• <code>/leaderboard 01.09.2026</code> (kun.oy.yil)\n` +
-            `• <code>/leaderboard 7d</code> (oxirgi 7 kun)\n` +
-            `• <code>/leaderboard 30d</code> (oxirgi 30 kun)\n\n` +
-            `<i>Yoki shunchaki <code>/leaderboard</code> deb yozsangiz, faol konkurs sanasidan hisoblanadi.</i>`,
+            `• <code>/leaderboard ${specifiedChatId} 2026-09-01</code>\n` +
+            `• <code>/leaderboard ${specifiedChatId} 7d</code>`,
             { parse_mode: "HTML" }
           );
         }
-        if (parsed.date.getTime() > Date.now()) {
-          return ctx.reply(
-            `⚠️ Kiritilgan sana kelajakda (${parsed.date.toLocaleDateString("uz-UZ")}). Iltimos, o'tgan yoki bugungi sanani kiriting.`
-          );
-        }
         sinceDate = parsed.date;
-        dateLabel = parsed.label || sinceDate.toLocaleDateString("uz-UZ");
-      } else {
-        // No date argument passed: check if there is an active contest for this group
-        const { data: activeContests } = await dbClient
-          .from("contests")
-          .select("title, start_date")
-          .eq("chat_id", chatId)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        if (activeContests && activeContests.length > 0) {
-          const contest = activeContests[0];
-          sinceDate = new Date(contest.start_date);
-          dateLabel = sinceDate.toLocaleDateString("uz-UZ");
-          contestNotice = `🎯 <b>Faol konkurs:</b> ${contest.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}\n`;
-        } else {
-          dateLabel = "Barcha vaqt bo'yicha";
-        }
+        periodKey = dateArg;
       }
 
-      // Query invites recorded for this group
-      let invitesQuery = dbClient
-        .from("invites")
-        .select("inviter_id, invitee_id, timestamp")
-        .eq("chat_id", chatId);
+      const stats = await fetchLeaderboardStats(dbClient, specifiedChatId, sinceDate);
+      const dmMsg = formatDmLeaderboard(stats, specifiedChatId);
+      const keyboard = getDmLeaderboardKeyboard(specifiedChatId, periodKey);
 
-      if (sinceDate) {
-        invitesQuery = invitesQuery.gte("timestamp", sinceDate.toISOString());
-      }
-
-      const { data: invites, error: invitesErr } = await invitesQuery;
-      if (invitesErr) throw invitesErr;
-
-      const escapedTitle = chatTitle.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-      if (!invites || invites.length === 0) {
-        return ctx.reply(
-          `🏆 <b>Takliflar Reytingi (Leaderboard)</b>\n` +
-          `👥 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
-          (contestNotice ? `${contestNotice}` : "") +
-          `📅 <b>Ko'rilayotgan davr:</b> ${sinceDate ? `${dateLabel} dan boshlab` : dateLabel}\n\n` +
-          `Hozircha ushbu muddat oralig'ida guruhga hech kim a'zo taklif qilmagan.\n\n` +
-          `Do'stlaringizni taklif qiling va reytingda 1-o'rinni egallang! 🚀\n\n` +
-          `ℹ️ <i>Boshqa sanadan boshlab ko'rish uchun:</i>\n` +
-          `<code>/leaderboard YYYY-MM-DD</code> (masalan: <code>/leaderboard 2026-09-01</code> yoki <code>/leaderboard 7d</code>)`,
-          { parse_mode: "HTML" }
-        );
-      }
-
-      // Tally invitations per inviter
-      const counts: Record<string, number> = {};
-      const inviterInviteesMap: Record<string, string[]> = {};
-
-      for (const inv of invites) {
-        if (!inv.inviter_id) continue;
-        counts[inv.inviter_id] = (counts[inv.inviter_id] || 0) + 1;
-        if (!inviterInviteesMap[inv.inviter_id]) {
-          inviterInviteesMap[inv.inviter_id] = [];
-        }
-        inviterInviteesMap[inv.inviter_id].push(inv.invitee_id);
-      }
-
-      const sortedEntries = Object.entries(counts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 10);
-
-      const topUserIds = sortedEntries.map(([id]) => id);
-
-      // Fetch user profile details
-      const userMap: Record<string, { name: string; username: string }> = {};
-      if (topUserIds.length > 0) {
-        const { data: usersData } = await dbClient
-          .from("users")
-          .select("telegram_id, first_name, last_name, username")
-          .in("telegram_id", topUserIds);
-
-        if (usersData) {
-          for (const u of usersData) {
-            userMap[u.telegram_id] = {
-              name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Foydalanuvchi",
-              username: u.username || ""
-            };
-          }
-        }
-      }
-
-      // Check current active status of invited members
-      const allTopInvitees = topUserIds.flatMap(id => inviterInviteesMap[id] || []);
-      const activeInviteesSet = new Set<string>();
-      if (allTopInvitees.length > 0) {
-        const { data: activeMems } = await dbClient
-          .from("memberships")
-          .select("telegram_id")
-          .eq("chat_id", chatId)
-          .in("telegram_id", allTopInvitees)
-          .neq("status", "left");
-
-        if (activeMems) {
-          for (const m of activeMems) {
-            activeInviteesSet.add(m.telegram_id);
-          }
-        }
-      }
-
-      const medalIcons = ["🥇", "🥈", "🥉"];
-      const lines = sortedEntries.map(([id, totalCount], index) => {
-        const u = userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
-        const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const userTag = u.username ? ` (@${u.username})` : "";
-        const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
-        
-        const invitees = inviterInviteesMap[id] || [];
-        const activeCount = invitees.filter(invId => activeInviteesSet.has(invId)).length;
-        const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
-
-        return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+      await ctx.reply(dmMsg, {
+        parse_mode: "HTML",
+        reply_markup: keyboard
       });
 
-      const totalInvitesInPeriod = invites.length;
-      const totalUniqueInviters = Object.keys(counts).length;
-
-      const responseMessage = 
-        `🏆 <b>Takliflar Reytingi (Leaderboard)</b>\n` +
-        `👥 <b>Guruh:</b> <i>${escapedTitle}</i>\n` +
-        (contestNotice ? `${contestNotice}` : "") +
-        `📅 <b>Sana:</b> ${sinceDate ? `${dateLabel} dan boshlab` : "Barcha vaqt bo'yicha"}\n` +
-        `📊 <b>Jami takliflar:</b> ${totalInvitesInPeriod} ta (${totalUniqueInviters} ta faol ishtirokchi)\n` +
-        `────────────────────\n\n` +
-        lines.join("\n") +
-        `\n\n────────────────────\n` +
-        `ℹ️ <i>Boshqa sanadan boshlab ko'rish:</i>\n` +
-        `<code>/leaderboard YYYY-MM-DD</code> (masalan: <code>/leaderboard 2026-09-01</code> yoki <code>/leaderboard 7d</code>)`;
-
-      await ctx.reply(responseMessage, { parse_mode: "HTML" });
     } catch (err: any) {
       console.error("Leaderboard command error:", err);
       try {
@@ -477,9 +690,190 @@ export function registerBotCommands(bot: any) {
     }
   };
 
-  // Register leaderboard command across multiple intuitive aliases
+  // ─────────────────────────────────────────────────────────────
+  // INTERACTIVE CALLBACK QUERIES FOR BOT DM
+  // ─────────────────────────────────────────────────────────────
+
+  // Admin selects group from buttons list
+  bot.action(/^lb_sel:([^:]+)(?::(.*))?$/, async (ctx: any) => {
+    try {
+      await ctx.answerCbQuery();
+      const chatId = ctx.match[1];
+      const dateArg = ctx.match[2] || "";
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
+
+      const dbClient = checkDatabase();
+      const isAdmin = await isUserAdminOfChat(ctx.telegram, dbClient, chatId, userId);
+      if (!isAdmin) {
+        return ctx.reply("⚠️ Siz ushbu guruhda administrator emassiz.");
+      }
+
+      let sinceDate: Date | null = null;
+      let periodKey = "all";
+      if (dateArg) {
+        const parsed = parseSinceDate(dateArg);
+        if (parsed.date) {
+          sinceDate = parsed.date;
+          periodKey = dateArg;
+        }
+      }
+
+      const stats = await fetchLeaderboardStats(dbClient, chatId, sinceDate);
+      const msg = formatDmLeaderboard(stats, chatId);
+      const keyboard = getDmLeaderboardKeyboard(chatId, periodKey);
+
+      await ctx.editMessageText(msg, {
+        parse_mode: "HTML",
+        reply_markup: keyboard
+      });
+    } catch (err: any) {
+      console.error("lb_sel callback error:", err);
+    }
+  });
+
+  // Admin changes period (all, 7d, 30d)
+  bot.action(/^lb_per:([^:]+):([^:]+)$/, async (ctx: any) => {
+    try {
+      await ctx.answerCbQuery();
+      const chatId = ctx.match[1];
+      const period = ctx.match[2];
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
+
+      const dbClient = checkDatabase();
+      const isAdmin = await isUserAdminOfChat(ctx.telegram, dbClient, chatId, userId);
+      if (!isAdmin) {
+        return ctx.reply("⚠️ Siz ushbu guruhda administrator emassiz.");
+      }
+
+      let sinceDate: Date | null = null;
+      if (period === "7d") {
+        sinceDate = new Date();
+        sinceDate.setDate(sinceDate.getDate() - 7);
+        sinceDate.setHours(0, 0, 0, 0);
+      } else if (period === "30d") {
+        sinceDate = new Date();
+        sinceDate.setDate(sinceDate.getDate() - 30);
+        sinceDate.setHours(0, 0, 0, 0);
+      }
+
+      const stats = await fetchLeaderboardStats(dbClient, chatId, sinceDate);
+      const msg = formatDmLeaderboard(stats, chatId);
+      const keyboard = getDmLeaderboardKeyboard(chatId, period);
+
+      try {
+        await ctx.editMessageText(msg, {
+          parse_mode: "HTML",
+          reply_markup: keyboard
+        });
+      } catch (e: any) {
+        if (!e.message?.includes("message is not modified")) {
+          throw e;
+        }
+      }
+    } catch (err: any) {
+      console.error("lb_per callback error:", err);
+    }
+  });
+
+  // Admin clicks refresh
+  bot.action(/^lb_ref:([^:]+):([^:]+)$/, async (ctx: any) => {
+    try {
+      await ctx.answerCbQuery("Reyting yangilandi! 🔄");
+      const chatId = ctx.match[1];
+      const period = ctx.match[2];
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
+
+      const dbClient = checkDatabase();
+      let sinceDate: Date | null = null;
+      if (period === "7d") {
+        sinceDate = new Date();
+        sinceDate.setDate(sinceDate.getDate() - 7);
+        sinceDate.setHours(0, 0, 0, 0);
+      } else if (period === "30d") {
+        sinceDate = new Date();
+        sinceDate.setDate(sinceDate.getDate() - 30);
+        sinceDate.setHours(0, 0, 0, 0);
+      }
+
+      const stats = await fetchLeaderboardStats(dbClient, chatId, sinceDate);
+      const msg = formatDmLeaderboard(stats, chatId);
+      const keyboard = getDmLeaderboardKeyboard(chatId, period);
+
+      try {
+        await ctx.editMessageText(msg, {
+          parse_mode: "HTML",
+          reply_markup: keyboard
+        });
+      } catch (e: any) {
+        if (!e.message?.includes("message is not modified")) {
+          throw e;
+        }
+      }
+    } catch (err: any) {
+      console.error("lb_ref callback error:", err);
+    }
+  });
+
+  // Admin clicks back to groups list
+  bot.action("lb_list", async (ctx: any) => {
+    try {
+      await ctx.answerCbQuery();
+      const userId = ctx.from?.id?.toString();
+      if (!userId) return;
+
+      const dbClient = checkDatabase();
+      const adminGroups = await getUserAdminGroups(ctx.telegram, dbClient, userId);
+
+      if (adminGroups.length === 0) {
+        return ctx.editMessageText("⚠️ Siz bot ulangan hech qaysi guruhda administrator emassiz.");
+      }
+
+      const keyboardButtons = adminGroups.map((g) => [
+        {
+          text: `👥 ${g.title || "Guruh"}`,
+          callback_data: `lb_sel:${g.id}`
+        }
+      ]);
+
+      await ctx.editMessageText(
+        `👋 <b>Guruhni tanlang:</b>\n\n` +
+        `Qaysi guruhingiz bo'yicha takliflar reytingini ko'rmoqchisiz?`,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: keyboardButtons
+          }
+        }
+      );
+    } catch (err: any) {
+      console.error("lb_list callback error:", err);
+    }
+  });
+
+  // Register leaderboard commands
   bot.command("leaderboard", handleLeaderboard);
   bot.command("top", handleLeaderboard);
   bot.command("reyting", handleLeaderboard);
   bot.hears(/^#?(leaderboard|reyting|top)(\s+.*)?$/i, handleLeaderboard);
+
+  // Bot /start greeting with helpful information for admins in private chat
+  bot.start(async (ctx: any) => {
+    if (ctx.chat?.type === "private") {
+      await ctx.reply(
+        `👋 <b>Assalomu alaykum!</b>\n\n` +
+        `Men guruhlar nazoratchisi va takliflar hisobini yurituvchi botman.\n\n` +
+        `<b>Administratorlar uchun shaxsiy xabarlardagi buyruqlar:</b>\n` +
+        `• <code>/leaderboard</code> — Guruhlaringizdagi takliflar reytingini ko'rish (guruh tanlash tugmalari bilan)\n` +
+        `• <code>/leaderboard &lt;guruh_id&gt; [sana]</code> — Aniq guruh va sana bo'yicha reytingni ko'rish\n\n` +
+        `<b>Guruh ichida ishlatiladigan buyruqlar:</b>\n` +
+        `• <code>/leaderboard</code> yoki <code>/top</code> — Guruh a'zolari takliflar reytingi\n` +
+        `• <code>/auth</code> — Web boshqaruv paneliga kirish kodi olish\n` +
+        `• <code>/sync</code> — Guruh a'zolarini to'liq sinxronlash`,
+        { parse_mode: "HTML" }
+      );
+    }
+  });
 }

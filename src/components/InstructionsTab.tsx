@@ -401,14 +401,29 @@ export default function InstructionsTab() {
 
                 <h4 className="font-bold text-[#1a1a1a] mt-6">Kim qancha odam taklif qilganini tekshirish (/leaderboard):</h4>
                 <p className="text-xs">
-                  Guruh a'zolari va adminlar guruhda istalgan vaqtda kim qancha odam qo'shganini va reytingning eng kuchli 10 taligini ko'rishlari mumkin. Sanani ham ko'rsatish imkoniyati mavjud:
+                  Guruh a'zolari va adminlar guruhda hamda botning shaxsiy xabarida (DM) kim qancha odam qo'shganini tekshirishlari mumkin. Guruh va DM da formatlar optimal tarzda ajratilgan:
                 </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="bg-[#F5F5F0] p-3.5 rounded-2xl border border-black/5 space-y-1.5">
+                    <span className="font-bold text-emerald-800 flex items-center gap-1">👥 Guruh ichida (Ixcham format)</span>
+                    <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
+                      Guruhda ortiqcha xabarlar va shovqin bo'lmasligi uchun faqat <strong>Takliflar Reytingi</strong> sarlavhasi va eng faol 10 nafar taklifchi ro'yxati chiqadi (Guruh nomi, sana va pastdagi tavsiyalar ko'rsatilmaydi).
+                    </p>
+                  </div>
+                  <div className="bg-[#F5F5F0] p-3.5 rounded-2xl border border-black/5 space-y-1.5">
+                    <span className="font-bold text-blue-800 flex items-center gap-1">🤖 Bot DM da (Adminlar uchun interaktiv)</span>
+                    <p className="text-[#4a4a4a] leading-relaxed text-[11px]">
+                      Faqat adminlar uchun. Agar guruh ko'rsatilmasa, admin boshqaradigan guruhlar tugmalari chiqadi. To'liq hisobot (Guruh, Davr, Jami takliflar, faol a'zolar) va interaktiv tugmalar (7 kun, 30 kun, Yangilash) mavjud.
+                    </p>
+                  </div>
+                </div>
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
                     <div>
                       <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard</code>
-                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Faol konkurs boshlanganidan beri (yoki barcha vaqt)</p>
+                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Guruhda: faol konkurs/umumiy reyting. DM da: guruh tanlash menyusi</p>
                     </div>
                     <button
                       onClick={() => handleCopy("/leaderboard", "lb-def")}
@@ -453,14 +468,14 @@ export default function InstructionsTab() {
 
                   <div className="flex items-center justify-between bg-[#F5F5F0] p-4 rounded-2xl border border-black/5">
                     <div>
-                      <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard 7d</code>
-                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">Oxirgi 7 kunlik (yoki <code>30d</code>) natijalar</p>
+                      <code className="text-sm font-mono font-bold text-[#5A5A40]">/leaderboard &lt;guruh_id&gt; 7d</code>
+                      <p className="text-[11px] text-[#5A5A40]/70 mt-0.5">DM da aniq guruh va muddat bo'yicha (masalan: <code>/leaderboard -1001234567890 7d</code>)</p>
                     </div>
                     <button
-                      onClick={() => handleCopy("/leaderboard 7d", "lb-7d")}
+                      onClick={() => handleCopy("/leaderboard -1001234567890 7d", "lb-dm")}
                       className="flex items-center gap-1.5 text-xs text-[#5A5A40] font-bold hover:text-black cursor-pointer bg-white px-3 py-1.5 rounded-lg shadow-2xs"
                     >
-                      {copiedText === "lb-7d" ? (
+                      {copiedText === "lb-dm" ? (
                         <>
                           <Check size={14} className="text-emerald-600" />
                           <span>Nusxa olindi!</span>
