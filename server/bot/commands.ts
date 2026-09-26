@@ -422,6 +422,15 @@ export function registerBotCommands(bot: any) {
     };
   }
 
+  // Helper: Format a user name as a clickable link without username text
+  function formatClickableUser(id: string, name: string, username?: string): string {
+    const rawName = (name || "").trim() || "Foydalanuvchi";
+    const escapedName = rawName.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const cleanUsername = username ? username.replace(/^@/, "").trim() : "";
+    const userUrl = cleanUsername ? `https://t.me/${cleanUsername}` : `tg://user?id=${id}`;
+    return `<a href="${userUrl}"><b>${escapedName}</b></a>`;
+  }
+
   // Format clean leaderboard message for group chats (minimal headers, preserves call to action)
   function formatGroupLeaderboard(stats: any): string {
     const ctaLine = `\n\n💡 <i>Guruhga kontaktlaringizni qo'shing va reytingda yuqori o'ringa chiqing!</i>`;
@@ -433,15 +442,14 @@ export function registerBotCommands(bot: any) {
     const medalIcons = ["🥇", "🥈", "🥉"];
     const lines = stats.sortedEntries.map(([id, totalCount]: [string, number], index: number) => {
       const u = stats.userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
-      const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const userTag = u.username ? ` (@${u.username})` : "";
+      const clickableName = formatClickableUser(id, u.name, u.username);
       const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
 
       const invitees = stats.inviterInviteesMap[id] || [];
       const activeCount = invitees.filter((invId: string) => stats.activeInviteesSet.has(invId)).length;
       const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
 
-      return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+      return `${rankIcon} ${clickableName} — <b>${totalCount}</b> ta taklif${retentionText}`;
     });
 
     return `🏆 <b>Takliflar Reytingi</b>\n\n${lines.join("\n")}${ctaLine}`;
@@ -461,15 +469,14 @@ export function registerBotCommands(bot: any) {
       const medalIcons = ["🥇", "🥈", "🥉"];
       const lines = stats.sortedEntries.map(([id, totalCount]: [string, number], index: number) => {
         const u = stats.userMap[id] || { name: "Noma'lum foydalanuvchi", username: "" };
-        const escapedName = u.name.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        const userTag = u.username ? ` (@${u.username})` : "";
+        const clickableName = formatClickableUser(id, u.name, u.username);
         const rankIcon = index < 3 ? medalIcons[index] : `${index + 1}.`;
 
         const invitees = stats.inviterInviteesMap[id] || [];
         const activeCount = invitees.filter((invId: string) => stats.activeInviteesSet.has(invId)).length;
         const retentionText = activeCount < totalCount ? ` <i>(${activeCount} ta faol)</i>` : "";
 
-        return `${rankIcon} <b>${escapedName}</b>${userTag} — <b>${totalCount}</b> ta taklif${retentionText}`;
+        return `${rankIcon} ${clickableName} — <b>${totalCount}</b> ta taklif${retentionText}`;
       });
       listContent = lines.join("\n");
     }
